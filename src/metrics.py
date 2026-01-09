@@ -140,15 +140,21 @@ def calculate_rolling(df: pd.DataFrame, column: str) -> pd.DataFrame:
 def calculate_all_metrics(
     start_date: str | None = None,
     end_date: str | None = None,
+    ffill: bool = True,
 ) -> pd.DataFrame:
     """
     Calculate all metrics: derived + changes + rolling for all series.
+
+    Args:
+        start_date: Start date filter
+        end_date: End date filter
+        ffill: Forward-fill missing values (set False for chart display)
 
     Returns:
         DataFrame with all metrics as columns
     """
     # Load raw data
-    df = load_base_data(start_date, end_date)
+    df = load_base_data(start_date, end_date, ffill=ffill)
 
     if df.empty:
         return df

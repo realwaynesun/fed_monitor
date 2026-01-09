@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env  # Then add FRED_API_KEY
+cp .env.example .env  # Then add required keys (see Environment Variables below)
 
 # Data fetching
 python scripts/fetch_data.py --backfill    # Initial 2-year backfill
@@ -27,6 +27,13 @@ python scripts/check_alerts.py --test-telegram  # Test Telegram connection
 # Scheduler (long-running daemon)
 python scripts/run_scheduler.py
 ```
+
+## Environment Variables
+
+Required in `.env`:
+- `FRED_API_KEY` - Get from https://fred.stlouisfed.org/ (My Account → API Keys)
+- `TELEGRAM_BOT_TOKEN` - Create via @BotFather on Telegram (required for alerts)
+- `TELEGRAM_CHAT_ID` - Your chat ID for receiving notifications
 
 ## Architecture
 
@@ -62,3 +69,15 @@ Everything is defined in `config/fed_monitor_config.yaml`:
 - `alert_state`: Current breach state per alert
 - `alerts_log`: Historical state transitions
 - `fetch_log`: Data fetch history for debugging
+
+### Modifying Configuration
+
+All changes to series, alerts, and dashboard layout are made in `config/fed_monitor_config.yaml`. After editing:
+- **New series**: Run `fetch_data.py --backfill` to populate data
+- **New derived metrics**: Data calculated on-the-fly from raw series
+- **New alerts**: Take effect on next `check_alerts.py` run
+- **Dashboard changes**: Reflected on next page load (5-minute cache TTL)
+
+### Alert ID Generation
+
+Alert IDs are generated as `{key}:{severity}:{hash(rule) % 10000}`. This allows multiple rules per metric (e.g., warning at 10, critical at 25) while maintaining stable state tracking across config edits.

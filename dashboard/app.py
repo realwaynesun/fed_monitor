@@ -17,8 +17,9 @@ import streamlit as st
 from dotenv import load_dotenv
 
 from src.config import get_config
-from src.database import init_db
+from src.database import init_db, get_latest_observation
 from src.metrics import calculate_all_metrics, get_latest_values
+from src.fred_client import fetch_all_series
 
 # Load environment variables
 load_dotenv(Path(__file__).parent.parent / ".env")
@@ -92,19 +93,46 @@ def load_latest() -> dict:
     return get_latest_values()
 
 
+# -----------------------------------------------------------------------------
+# Auto-fetch data if database is empty (for Streamlit Cloud)
+# -----------------------------------------------------------------------------
+def check_and_fetch_data():
+    """Check if we have data, fetch from FRED if not."""
+    # Check if we have any data by looking at the first series
+    first_series = config.series[0]["key"] if config.series else None
+    if first_series:
+        last_date, _ = get_latest_observation(first_series)
+        if last_date is None:
+            # No data - need to fetch
+            return False
+    return True
+
+if not check_and_fetch_data():
+    st.info("Fetching data from FRED API... This may take a minute on first load.")
+    with st.spinner("Loading data from Federal Reserve..."):
+        try:
+            # Fetch 2 years of data
+            fetch_all_series(backfill_days=730)
+            st.cache_data.clear()
+            st.rerun()
+        except Exception as e:
+            st.error(f"Error fetching data: {e}")
+            st.info("Please check that FRED_API_KEY is configured in Streamlit secrets.")
+            st.stop()
+
 # Load data
 try:
     df = load_data(start_str, end_str)
     latest = load_latest()
 except Exception as e:
     st.error(f"Error loading data: {e}")
-    st.info("Have you run the data fetch script? Try: `python scripts/fetch_data.py --backfill`")
+    st.info("Please check that FRED_API_KEY is configured correctly.")
     st.stop()
 
 if df.empty:
-    st.warning("No data available. Please run the data fetch script first.")
-    st.code("cd ~/fed_monitor && python scripts/fetch_data.py --backfill")
-    st.stop()
+    st.warning("No data available. Refreshing...")
+    st.cache_data.clear()
+    st.rerun()
 
 
 # -----------------------------------------------------------------------------

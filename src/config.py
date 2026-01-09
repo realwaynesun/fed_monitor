@@ -10,6 +10,20 @@ from typing import Any
 import yaml
 
 
+def get_secret(key: str) -> str:
+    """Get secret from environment or Streamlit secrets (for cloud deployment)."""
+    # Try environment first (local dev)
+    value = os.environ.get(key, "")
+    if value:
+        return value
+    # Try Streamlit secrets (cloud deployment)
+    try:
+        import streamlit as st
+        return st.secrets.get(key, "")
+    except Exception:
+        return ""
+
+
 class FedMonitorConfig:
     """Loads and provides access to fed_monitor_config.yaml."""
 
@@ -44,9 +58,9 @@ class FedMonitorConfig:
     @property
     def fred_api_key(self) -> str:
         env_var = self._raw["data_sources"]["fred"]["api_key_env"]
-        key = os.environ.get(env_var, "")
+        key = get_secret(env_var)
         if not key:
-            raise ValueError(f"Missing environment variable: {env_var}")
+            raise ValueError(f"Missing secret: {env_var}")
         return key
 
     @property
@@ -147,12 +161,12 @@ class FedMonitorConfig:
     @property
     def telegram_bot_token(self) -> str:
         env_var = self._raw["notifications"]["telegram"]["bot_token_env"]
-        return os.environ.get(env_var, "")
+        return get_secret(env_var)
 
     @property
     def telegram_chat_id(self) -> str:
         env_var = self._raw["notifications"]["telegram"]["chat_id_env"]
-        return os.environ.get(env_var, "")
+        return get_secret(env_var)
 
     @property
     def telegram_parse_mode(self) -> str:

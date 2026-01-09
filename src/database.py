@@ -29,23 +29,21 @@ def _get_turso_connection():
     import libsql_experimental as libsql
     url = get_secret("TURSO_DATABASE_URL")
     token = get_secret("TURSO_AUTH_TOKEN")
-    return libsql.connect(url, auth_token=token)
+    # Turso requires sync=True for remote connections
+    return libsql.connect(url, auth_token=token, sync=True)
 
 
 def init_db() -> None:
     """Initialize database schema."""
     if _use_turso():
         conn = _get_turso_connection()
-        # Turso uses conn.execute() directly
-        execute = conn.execute
     else:
         db_path = get_db_path()
         conn = sqlite3.connect(db_path)
-        execute = conn.cursor().execute
 
     try:
         # Raw FRED observations (use INTEGER PRIMARY KEY for Turso compatibility)
-        execute("""
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS observations (
                 id INTEGER PRIMARY KEY,
                 series_key TEXT NOT NULL,
@@ -55,10 +53,10 @@ def init_db() -> None:
                 UNIQUE(series_key, date)
             )
         """)
-        execute("CREATE INDEX IF NOT EXISTS idx_obs_key_date ON observations(series_key, date)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_obs_key_date ON observations(series_key, date)")
 
         # Derived metrics (calculated values)
-        execute("""
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS derived_metrics (
                 id INTEGER PRIMARY KEY,
                 metric_key TEXT NOT NULL,
@@ -68,10 +66,10 @@ def init_db() -> None:
                 UNIQUE(metric_key, date)
             )
         """)
-        execute("CREATE INDEX IF NOT EXISTS idx_derived_key_date ON derived_metrics(metric_key, date)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_derived_key_date ON derived_metrics(metric_key, date)")
 
         # Alert state tracking
-        execute("""
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS alert_state (
                 id INTEGER PRIMARY KEY,
                 alert_id TEXT NOT NULL UNIQUE,
@@ -83,7 +81,7 @@ def init_db() -> None:
         """)
 
         # Alert log (historical triggers)
-        execute("""
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS alerts_log (
                 id INTEGER PRIMARY KEY,
                 alert_id TEXT NOT NULL,
@@ -95,10 +93,10 @@ def init_db() -> None:
                 triggered_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        execute("CREATE INDEX IF NOT EXISTS idx_alerts_log_time ON alerts_log(triggered_at)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_alerts_log_time ON alerts_log(triggered_at)")
 
         # Fetch log (for debugging)
-        execute("""
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS fetch_log (
                 id INTEGER PRIMARY KEY,
                 series_key TEXT NOT NULL,

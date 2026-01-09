@@ -110,6 +110,27 @@ if df.empty:
 # -----------------------------------------------------------------------------
 # Helper Functions
 # -----------------------------------------------------------------------------
+
+# Color palette visible on dark backgrounds
+CHART_COLORS = [
+    "#00D4FF",  # Cyan
+    "#FF6B6B",  # Coral
+    "#4ECDC4",  # Teal
+    "#FFE66D",  # Yellow
+    "#95E1D3",  # Mint
+    "#F38181",  # Salmon
+    "#AA96DA",  # Lavender
+    "#FCBAD3",  # Pink
+]
+
+
+def hex_to_rgba(hex_color: str, alpha: float = 0.3) -> str:
+    """Convert hex color to rgba with transparency."""
+    hex_color = hex_color.lstrip("#")
+    r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+    return f"rgba({r}, {g}, {b}, {alpha})"
+
+
 def create_line_chart(
     df: pd.DataFrame,
     series_keys: list[str],
@@ -125,15 +146,17 @@ def create_line_chart(
 
     fig = go.Figure()
 
-    for key in available:
+    for i, key in enumerate(available):
         series_def = config.get_series(key) or config.get_derived(key) or {}
         label = series_def.get("label", key)
+        color = CHART_COLORS[i % len(CHART_COLORS)]
 
         fig.add_trace(go.Scatter(
             x=df.index,
             y=df[key],
             mode="lines",
             name=label,
+            line=dict(color=color, width=2),
             hovertemplate=f"{label}: %{{y:.4f}}<extra></extra>",
         ))
 
@@ -166,9 +189,10 @@ def create_area_chart(
 
     fig = go.Figure()
 
-    for key in available:
+    for i, key in enumerate(available):
         series_def = config.get_series(key) or config.get_derived(key) or {}
         label = series_def.get("label", key)
+        color = CHART_COLORS[i % len(CHART_COLORS)]
 
         fig.add_trace(go.Scatter(
             x=df.index,
@@ -176,6 +200,8 @@ def create_area_chart(
             mode="lines",
             fill="tozeroy",
             name=label,
+            line=dict(color=color, width=2),
+            fillcolor=hex_to_rgba(color, 0.3),
             hovertemplate=f"{label}: %{{y:,.0f}}<extra></extra>",
         ))
 
@@ -204,14 +230,16 @@ def create_bar_chart(
 
     fig = go.Figure()
 
-    for key in available:
+    for i, key in enumerate(available):
         series_def = config.get_series(key) or config.get_derived(key) or {}
         label = series_def.get("label", key)
+        color = CHART_COLORS[i % len(CHART_COLORS)]
 
         fig.add_trace(go.Bar(
             x=df.index,
             y=df[key],
             name=label,
+            marker_color=color,
             hovertemplate=f"{label}: %{{y:,.0f}}<extra></extra>",
         ))
 

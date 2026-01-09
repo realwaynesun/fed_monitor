@@ -84,8 +84,9 @@ def get_alert_context(key: str, df=None) -> dict[str, float]:
     latest_value = series.iloc[-1]
     context = {"value": latest_value}
 
-    # Get all metrics from the same date (or closest available)
-    all_suffixes = ["d1", "d5", "d20", "pct1", "pct5", "ma5", "ma20", "std20", "zscore20"]
+    # Build suffix list dynamically from config
+    config = get_config()
+    all_suffixes = [c["name"] for c in config.metric_changes] + [r["name"] for r in config.metric_rolling]
 
     for suffix in all_suffixes:
         col = f"{key}_{suffix}"

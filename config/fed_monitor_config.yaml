@@ -1,8 +1,10 @@
-# fed_monitor_config.yaml
-# Fed Monetary Policy Monitoring System - Complete Configuration
-# Version: 2.0 (Merged & Enhanced)
+# fed_monitor_config_v3.yaml
+# Fed Monetary Policy & Liquidity Monitoring System - Enhanced Configuration
+# Version: 3.0 (Money-market distribution + QT composition + financial conditions)
+# Last updated: 2026-01-09
 
-version: "2.0"
+version: "3.0"
+last_updated: "2026-01-09"
 timezone: "Asia/Tokyo"
 
 # ============================================================================
@@ -13,7 +15,7 @@ data_sources:
     base_url: "https://api.stlouisfed.org/fred"
     file_type: "json"
     api_key_env: "FRED_API_KEY"
-    # Weekly data will be forward-filled to daily for consistent panel
+    # Weekly/monthly series will be forward-filled to daily for consistent panel
     default_align: "ffill_to_daily"
     # Rate limiting: FRED allows 120 requests per minute
     rate_limit:
@@ -30,14 +32,14 @@ notifications:
     chat_id_env: "TELEGRAM_CHAT_ID"
     # Message format: markdown or html
     parse_mode: "markdown"
-  
+
   webhook:
     enabled: false
     url_env: "ALERT_WEBHOOK_URL"
     method: "POST"
     headers:
       Content-Type: "application/json"
-  
+
   email:
     enabled: false
     smtp_host_env: "SMTP_HOST"
@@ -45,14 +47,14 @@ notifications:
     username_env: "SMTP_USERNAME"
     password_env: "SMTP_PASSWORD"
     from_addr_env: "ALERT_FROM_EMAIL"
-    to_addrs_env: "ALERT_TO_EMAILS"  # comma-separated
+    to_addrs_env: "ALERT_TO_EMAILS" # comma-separated
 
 # ============================================================================
 # SERIES DEFINITIONS
 # ============================================================================
 series:
   # --------------------------------------------------------------------------
-  # RATES - Interest Rate Corridor
+  # POLICY IMPLEMENTATION RATES (CORRIDOR)
   # --------------------------------------------------------------------------
   - key: effr
     series_id: "EFFR"
@@ -67,7 +69,16 @@ series:
     label: "Interest Rate on Reserve Balances"
     frequency: "daily"
     unit: "percent"
-    description: "Rate paid on bank reserves held at Fed - corridor anchor"
+    description: "Rate paid on bank reserves held at Fed (administered rate)"
+    transform: { type: "identity" }
+
+  # ON RRP: use OFFERING rate for policy floor monitoring; AWARD rate is included for completeness.
+  - key: rrp_offering
+    series_id: "RRPONTSYOFFR"
+    label: "ON RRP Offering Rate"
+    frequency: "daily"
+    unit: "percent"
+    description: "Overnight reverse repo offering rate (administered floor)"
     transform: { type: "identity" }
 
   - key: rrp_award
@@ -75,7 +86,7 @@ series:
     label: "ON RRP Award Rate"
     frequency: "daily"
     unit: "percent"
-    description: "Overnight reverse repo rate - corridor floor"
+    description: "Overnight reverse repo award rate (typically equals offering)"
     transform: { type: "identity" }
 
   - key: dfedtaru
@@ -94,20 +105,12 @@ series:
     description: "FOMC target range lower bound"
     transform: { type: "identity" }
 
-  - key: sofr
-    series_id: "SOFR"
-    label: "Secured Overnight Financing Rate"
-    frequency: "daily"
-    unit: "percent"
-    description: "Repo rate benchmark - reflects true secured funding cost"
-    transform: { type: "identity" }
-
   - key: dpcredit
     series_id: "DPCREDIT"
     label: "Discount Window Primary Credit Rate"
     frequency: "daily"
     unit: "percent"
-    description: "Penalty rate for bank borrowing - corridor ceiling"
+    description: "Penalty rate for bank borrowing (ceiling / backstop)"
     transform: { type: "identity" }
 
   - key: srf_rate
@@ -115,27 +118,244 @@ series:
     label: "Standing Repo Facility Rate"
     frequency: "daily"
     unit: "percent"
-    description: "SRF offering rate for primary dealers"
+    description: "Standing Repo Facility offering rate"
     transform: { type: "identity" }
 
   # --------------------------------------------------------------------------
-  # LIQUIDITY POOLS - Balance Sheet Components
+  # REFERENCE RATES (SECURED/UNSECURED)
   # --------------------------------------------------------------------------
+  - key: sofr
+    series_id: "SOFR"
+    label: "Secured Overnight Financing Rate"
+    frequency: "daily"
+    unit: "percent"
+    description: "Broad Treasury GC repo benchmark"
+    transform: { type: "identity" }
+
+  # NOTE: FRED series ID for TGCR is TGCRRATE (not TGCR).
+  - key: tgcr
+    series_id: "TGCRRATE"
+    label: "Tri-Party General Collateral Rate"
+    frequency: "daily"
+    unit: "percent"
+    description: "Tri-party Treasury GC repo reference rate"
+    transform: { type: "identity" }
+
+  # NOTE: BGCR is not available on FRED (only via NY Fed direct)
+  # - key: bgcr
+  #   series_id: "BGCR"
+  #   label: "Broad General Collateral Rate"
+  #   frequency: "daily"
+  #   unit: "percent"
+  #   description: "Broader Treasury GC repo reference rate (tri-party + GCF)"
+  #   transform: { type: "identity" }
+
+  - key: obfr
+    series_id: "OBFR"
+    label: "Overnight Bank Funding Rate"
+    frequency: "daily"
+    unit: "percent"
+    description: "Unsecured overnight bank funding (includes Eurodollars)"
+    transform: { type: "identity" }
+
+  # --------------------------------------------------------------------------
+  # REFERENCE RATE DISTRIBUTIONS & VOLUMES (TAIL RISK / DISPERSION)
+  #   - Added because NY Fed/Fed Notes emphasize spreads + distribution/tails as
+  #     signals when approaching the 'ample reserves' boundary.
+  # --------------------------------------------------------------------------
+  # EFFR distribution + volume
+  - key: effr_p1
+    series_id: "EFFR1"
+    label: "EFFR 1st Percentile"
+    frequency: "daily"
+    unit: "percent"
+    description: "Lower tail of fed funds transactions"
+    transform: { type: "identity" }
+
+  - key: effr_p25
+    series_id: "EFFR25"
+    label: "EFFR 25th Percentile"
+    frequency: "daily"
+    unit: "percent"
+    description: "25th percentile of fed funds transactions"
+    transform: { type: "identity" }
+
+  - key: effr_p75
+    series_id: "EFFR75"
+    label: "EFFR 75th Percentile"
+    frequency: "daily"
+    unit: "percent"
+    description: "75th percentile of fed funds transactions"
+    transform: { type: "identity" }
+
+  - key: effr_p99
+    series_id: "EFFR99"
+    label: "EFFR 99th Percentile"
+    frequency: "daily"
+    unit: "percent"
+    description: "Upper tail of fed funds transactions"
+    transform: { type: "identity" }
+
+  - key: effr_volume_bil
+    series_id: "EFFRVOL"
+    label: "EFFR Underlying Volume"
+    frequency: "daily"
+    unit: "usd_billions"
+    description: "Underlying volume used to compute EFFR"
+    transform: { type: "identity" }
+
+  # OBFR distribution + volume
+  - key: obfr_p1
+    series_id: "OBFR1"
+    label: "OBFR 1st Percentile"
+    frequency: "daily"
+    unit: "percent"
+    description: "Lower tail of unsecured bank funding"
+    transform: { type: "identity" }
+
+  - key: obfr_p25
+    series_id: "OBFR25"
+    label: "OBFR 25th Percentile"
+    frequency: "daily"
+    unit: "percent"
+    description: "25th percentile of OBFR transactions"
+    transform: { type: "identity" }
+
+  - key: obfr_p75
+    series_id: "OBFR75"
+    label: "OBFR 75th Percentile"
+    frequency: "daily"
+    unit: "percent"
+    description: "75th percentile of OBFR transactions"
+    transform: { type: "identity" }
+
+  - key: obfr_p99
+    series_id: "OBFR99"
+    label: "OBFR 99th Percentile"
+    frequency: "daily"
+    unit: "percent"
+    description: "Upper tail of OBFR transactions"
+    transform: { type: "identity" }
+
+  - key: obfr_volume_bil
+    series_id: "OBFRVOL"
+    label: "OBFR Underlying Volume"
+    frequency: "daily"
+    unit: "usd_billions"
+    description: "Underlying volume used to compute OBFR"
+    transform: { type: "identity" }
+
+  # SOFR distribution + volume
+  - key: sofr_p1
+    series_id: "SOFR1"
+    label: "SOFR 1st Percentile"
+    frequency: "daily"
+    unit: "percent"
+    description: "Lower tail of SOFR transactions"
+    transform: { type: "identity" }
+
+  - key: sofr_p25
+    series_id: "SOFR25"
+    label: "SOFR 25th Percentile"
+    frequency: "daily"
+    unit: "percent"
+    description: "25th percentile of SOFR transactions"
+    transform: { type: "identity" }
+
+  - key: sofr_p75
+    series_id: "SOFR75"
+    label: "SOFR 75th Percentile"
+    frequency: "daily"
+    unit: "percent"
+    description: "75th percentile of SOFR transactions"
+    transform: { type: "identity" }
+
+  - key: sofr_p99
+    series_id: "SOFR99"
+    label: "SOFR 99th Percentile"
+    frequency: "daily"
+    unit: "percent"
+    description: "Upper tail of SOFR transactions"
+    transform: { type: "identity" }
+
+  - key: sofr_volume_bil
+    series_id: "SOFRVOL"
+    label: "SOFR Underlying Volume"
+    frequency: "daily"
+    unit: "usd_billions"
+    description: "Underlying volume used to compute SOFR"
+    transform: { type: "identity" }
+
+  # TGCR distribution + volume (IDs are longer than EFFR/SOFR/OBFR)
+  - key: tgcr_p1
+    series_id: "TGCR1STPERCENTILE"
+    label: "TGCR 1st Percentile"
+    frequency: "daily"
+    unit: "percent"
+    description: "Lower tail of tri-party repo rates"
+    transform: { type: "identity" }
+
+  - key: tgcr_p25
+    series_id: "TGCR25THPERCENTILE"
+    label: "TGCR 25th Percentile"
+    frequency: "daily"
+    unit: "percent"
+    description: "25th percentile of TGCR transactions"
+    transform: { type: "identity" }
+
+  - key: tgcr_p75
+    series_id: "TGCR75THPERCENTILE"
+    label: "TGCR 75th Percentile"
+    frequency: "daily"
+    unit: "percent"
+    description: "75th percentile of TGCR transactions"
+    transform: { type: "identity" }
+
+  - key: tgcr_p99
+    series_id: "TGCR99THPERCENTILE"
+    label: "TGCR 99th Percentile"
+    frequency: "daily"
+    unit: "percent"
+    description: "Upper tail of tri-party repo rates"
+    transform: { type: "identity" }
+
+  - key: tgcr_volume_bil
+    series_id: "TGCRVOLUME"
+    label: "TGCR Underlying Volume"
+    frequency: "daily"
+    unit: "usd_billions"
+    description: "Underlying volume used to compute TGCR"
+    transform: { type: "identity" }
+
+  # --------------------------------------------------------------------------
+  # TEMPORARY OPEN MARKET OPERATIONS (LIQUIDITY INJECTIONS)
+  # --------------------------------------------------------------------------
+  - key: repo_overnight_bil
+    series_id: "RPONTSYD"
+    label: "Overnight Repos (Treasury) - Amount"
+    frequency: "daily"
+    unit: "usd_billions"
+    description: "Overnight repos: Treasury securities bought by the Fed"
+    transform: { type: "identity" }
+
   - key: rrp_usage_bil
     series_id: "RRPONTSYD"
     label: "ON RRP Usage"
     frequency: "daily"
     unit: "usd_billions"
-    description: "Daily ON RRP take-up - measures excess liquidity parking"
+    description: "Overnight reverse repos: Treasury securities sold by the Fed"
     transform: { type: "identity" }
 
+  # --------------------------------------------------------------------------
+  # LIQUIDITY POOLS - BALANCE SHEET COMPONENTS
+  # --------------------------------------------------------------------------
   - key: reserves_mil
     series_id: "WRESBAL"
     label: "Reserve Balances with FRBs"
     frequency: "weekly_ending_wed"
     unit: "usd_millions"
     align: "ffill_to_daily"
-    description: "Bank reserves at Fed - key liquidity metric"
+    description: "Bank reserves at the Fed"
     transform: { type: "identity" }
 
   - key: tga_mil
@@ -144,7 +364,7 @@ series:
     frequency: "weekly_asof_wed"
     unit: "usd_millions"
     align: "ffill_to_daily"
-    description: "Treasury cash balance - drains/adds liquidity when moves"
+    description: "Treasury cash balance (drains/adds reserves when it moves)"
     transform: { type: "identity" }
 
   - key: walcl_mil
@@ -153,38 +373,104 @@ series:
     frequency: "weekly_asof_wed"
     unit: "usd_millions"
     align: "ffill_to_daily"
-    description: "Total Fed balance sheet - tracks QE/QT progress"
+    description: "Total Fed assets (balance sheet size)"
     transform: { type: "identity" }
 
   - key: rrp_h41_mil
     series_id: "WLRRAL"
-    label: "Reverse Repo (H.4.1)"
+    label: "Reverse Repo (H.4.1, Wed level)"
     frequency: "weekly_asof_wed"
     unit: "usd_millions"
     align: "ffill_to_daily"
-    description: "Weekly RRP snapshot from H.4.1 release"
+    description: "Weekly reverse repo snapshot from H.4.1"
+    transform: { type: "identity" }
+
+  - key: currency_mil
+    series_id: "WCURCIR"
+    label: "Currency in Circulation (H.4.1 Week Avg)"
+    frequency: "weekly_ending_wed"
+    unit: "usd_millions"
+    align: "ffill_to_daily"
+    description: "Currency in circulation (structural reserve drain)"
+    transform: { type: "identity" }
+
+  # SOMA / securities held outright (QT composition)
+  - key: soma_total_mil
+    series_id: "WSHOSHO"
+    label: "SOMA Securities Held Outright (Total)"
+    frequency: "weekly_asof_wed"
+    unit: "usd_millions"
+    align: "ffill_to_daily"
+    description: "Total securities held outright (SOMA proxy)"
+    transform: { type: "identity" }
+
+  - key: soma_treasuries_mil
+    series_id: "WSHOTSL"
+    label: "SOMA U.S. Treasury Securities"
+    frequency: "weekly_asof_wed"
+    unit: "usd_millions"
+    align: "ffill_to_daily"
+    description: "Fed holdings of U.S. Treasury securities"
+    transform: { type: "identity" }
+
+  - key: soma_tsy_bills_mil
+    series_id: "WSHOBL"
+    label: "SOMA U.S. Treasury Bills"
+    frequency: "weekly_asof_wed"
+    unit: "usd_millions"
+    align: "ffill_to_daily"
+    description: "Fed holdings of Treasury bills (composition shift indicator)"
+    transform: { type: "identity" }
+
+  - key: soma_tsy_coupons_nominal_mil
+    series_id: "WSHONBNL"
+    label: "SOMA UST Notes & Bonds (Nominal)"
+    frequency: "weekly_asof_wed"
+    unit: "usd_millions"
+    align: "ffill_to_daily"
+    description: "Fed holdings of nominal Treasury notes & bonds"
+    transform: { type: "identity" }
+
+  - key: soma_mbs_mil
+    series_id: "WSHOMCB"
+    label: "SOMA Mortgage-Backed Securities"
+    frequency: "weekly_asof_wed"
+    unit: "usd_millions"
+    align: "ffill_to_daily"
+    description: "Fed holdings of agency MBS"
+    transform: { type: "identity" }
+
+  # Banking system context (for reserves sufficiency ratios)
+  - key: bank_assets_bil
+    series_id: "TLAACBW027SBOG"
+    label: "Total Assets, All Commercial Banks"
+    frequency: "weekly"
+    unit: "usd_billions"
+    align: "ffill_to_daily"
+    description: "Denominator for reserves sufficiency (banks' balance sheet size)"
     transform: { type: "identity" }
 
   # --------------------------------------------------------------------------
-  # STRESS INDICATORS - Backstop Facility Usage
+  # STRESS INDICATORS - BACKSTOP FACILITY USAGE
   # --------------------------------------------------------------------------
   - key: dw_primary_mil
     series_id: "WLCFLPCL"
-    label: "Discount Window Primary Credit"
+    label: "Discount Window Primary Credit Outstanding"
     frequency: "weekly_asof_wed"
     unit: "usd_millions"
     align: "ffill_to_daily"
-    description: "Banks borrowing from discount window - stress signal"
+    description: "Banks borrowing from the discount window (stress signal)"
     transform: { type: "identity" }
 
-  - key: srf_usage_mil
-    series_id: "WLRFSTRL"
-    label: "Standing Repo Facility Usage"
-    frequency: "weekly_asof_wed"
-    unit: "usd_millions"
-    align: "ffill_to_daily"
-    description: "SRF take-up by dealers - repo market stress signal"
-    transform: { type: "identity" }
+  # NOTE: SRF usage series not available on FRED (only rate SRFTSYD is available)
+  # - key: srf_usage_mil
+  #   series_id: "WLRFSTRL"
+  #   label: "Standing Repo Facility Usage"
+  #   frequency: "weekly_asof_wed"
+  #   unit: "usd_millions"
+  #   align: "ffill_to_daily"
+  #   description: "SRF take-up (repo market stress / collateral funding)"
+  #   transform: { type: "identity" }
 
   - key: swaps_mil
     series_id: "SWPT"
@@ -192,17 +478,18 @@ series:
     frequency: "weekly_asof_wed"
     unit: "usd_millions"
     align: "ffill_to_daily"
-    description: "USD swap lines to foreign CBs - global dollar stress"
+    description: "USD swap lines to foreign central banks"
     transform: { type: "identity" }
 
-  - key: fima_repo_mil
-    series_id: "H41RESPPALGFOFNWW"
-    label: "FIMA Repo Pool"
-    frequency: "weekly_asof_wed"
-    unit: "usd_millions"
-    align: "ffill_to_daily"
-    description: "Foreign central bank repo facility usage"
-    transform: { type: "identity" }
+  # NOTE: FIMA repo series ID H41RESPPALGFOFNWW not found on FRED
+  # - key: fima_repo_mil
+  #   series_id: "H41RESPPALGFOFNWW"
+  #   label: "FIMA Repo Pool"
+  #   frequency: "weekly_asof_wed"
+  #   unit: "usd_millions"
+  #   align: "ffill_to_daily"
+  #   description: "Foreign and international monetary authorities repo facility"
+  #   transform: { type: "identity" }
 
   - key: foreign_official_repo_mil
     series_id: "H41RESPPALGTRFNWW"
@@ -214,30 +501,89 @@ series:
     transform: { type: "identity" }
 
   # --------------------------------------------------------------------------
-  # SUPPLEMENTARY - Market Rates & Spreads
+  # BROADER FINANCIAL CONDITIONS (FOR CONTEXT + FALSE-POSITIVE FILTERING)
   # --------------------------------------------------------------------------
-  - key: obfr
-    series_id: "OBFR"
-    label: "Overnight Bank Funding Rate"
-    frequency: "daily"
-    unit: "percent"
-    description: "Includes eurodollar transactions - broader than EFFR"
+  - key: nfci
+    series_id: "NFCI"
+    label: "Chicago Fed National Financial Conditions Index"
+    frequency: "weekly"
+    unit: "index"
+    align: "ffill_to_daily"
+    description: "Broad U.S. financial conditions index (0=average; +tight/-loose)"
     transform: { type: "identity" }
 
-  - key: tgcr
-    series_id: "TGCR"
-    label: "Tri-Party General Collateral Rate"
-    frequency: "daily"
-    unit: "percent"
-    description: "Tri-party repo rate for Treasury collateral"
+  - key: stl_fsi
+    series_id: "STLFSI4"
+    label: "St. Louis Fed Financial Stress Index"
+    frequency: "weekly"
+    unit: "index"
+    align: "ffill_to_daily"
+    description: "Financial stress index (0=average; higher=more stress)"
     transform: { type: "identity" }
 
-  - key: bgcr
-    series_id: "BGCR"
-    label: "Broad General Collateral Rate"
+  - key: kc_fsi
+    series_id: "KCFSI"
+    label: "Kansas City Fed Financial Stress Index"
+    frequency: "monthly"
+    unit: "index"
+    align: "ffill_to_daily"
+    description: "Financial stress index (monthly)"
+    transform: { type: "identity" }
+
+  - key: hy_oas
+    series_id: "BAMLH0A0HYM2"
+    label: "US High Yield OAS"
     frequency: "daily"
     unit: "percent"
-    description: "Broader repo rate including DVP"
+    description: "ICE BofA US High Yield Option-Adjusted Spread"
+    transform: { type: "identity" }
+
+  - key: ig_oas
+    series_id: "BAMLC0A0CM"
+    label: "US Investment Grade OAS"
+    frequency: "daily"
+    unit: "percent"
+    description: "ICE BofA US Corporate Option-Adjusted Spread"
+    transform: { type: "identity" }
+
+  - key: vix
+    series_id: "VIXCLS"
+    label: "CBOE Volatility Index (VIX)"
+    frequency: "daily"
+    unit: "index"
+    description: "Equity implied volatility proxy"
+    transform: { type: "identity" }
+
+  - key: dgs3mo
+    series_id: "DGS3MO"
+    label: "3-Month Treasury Yield"
+    frequency: "daily"
+    unit: "percent"
+    description: "Short-end Treasury yield (H.15)"
+    transform: { type: "identity" }
+
+  - key: dgs2
+    series_id: "DGS2"
+    label: "2-Year Treasury Yield"
+    frequency: "daily"
+    unit: "percent"
+    description: "Policy expectations proxy"
+    transform: { type: "identity" }
+
+  - key: dgs10
+    series_id: "DGS10"
+    label: "10-Year Treasury Yield"
+    frequency: "daily"
+    unit: "percent"
+    description: "Long-end Treasury yield"
+    transform: { type: "identity" }
+
+  - key: t10y3m
+    series_id: "T10Y3M"
+    label: "10Y-3M Treasury Curve (Pct Points)"
+    frequency: "daily"
+    unit: "percent"
+    description: "10Y Treasury minus 3M Treasury"
     transform: { type: "identity" }
 
 # ============================================================================
@@ -251,34 +597,52 @@ derived:
     label: "ON RRP Usage (Millions)"
     unit: "usd_millions"
     expr: "rrp_usage_bil * 1000.0"
-    description: "Convert to millions for consistent math with H.4.1 data"
+    description: "Convert to millions for consistent math with H.4.1 series"
+
+  - key: repo_overnight_mil
+    label: "Overnight Repo Amount (Millions)"
+    unit: "usd_millions"
+    expr: "repo_overnight_bil * 1000.0"
+    description: "Convert repo operation amount to millions"
 
   # --------------------------------------------------------------------------
-  # Rate Corridor Spreads
+  # Policy Corridor / Implementation Spreads (bps)
   # --------------------------------------------------------------------------
   - key: spread_iorb_rrp
-    label: "IORB - RRP Spread"
+    label: "IORB - ON RRP Offering Spread"
     unit: "bps"
-    expr: "(iorb - rrp_award) * 100"
-    description: "Width between floor and anchor - currently 5bp"
+    expr: "(iorb - rrp_offering) * 100"
+    description: "Administered corridor width between IORB and ON RRP offering"
 
   - key: spread_effr_iorb
     label: "EFFR - IORB Spread"
     unit: "bps"
     expr: "(effr - iorb) * 100"
-    description: "Should be ~0 or slightly negative; positive = tightness"
+    description: "Key ample-reserves indicator: moves up toward/above 0 when money markets tighten"
+
+  - key: spread_effr_rrp
+    label: "EFFR - ON RRP Offering Spread"
+    unit: "bps"
+    expr: "(effr - rrp_offering) * 100"
+    description: "Distance from policy floor"
 
   - key: spread_sofr_effr
     label: "SOFR - EFFR Spread"
     unit: "bps"
     expr: "(sofr - effr) * 100"
-    description: "Repo vs unsecured spread; wide = collateral scarcity"
+    description: "Secured vs unsecured spread (collateral / balance-sheet constraints)"
 
   - key: spread_sofr_rrp
-    label: "SOFR - RRP Spread"
+    label: "SOFR - ON RRP Offering Spread"
     unit: "bps"
-    expr: "(sofr - rrp_award) * 100"
-    description: "Distance from floor - measures rate corridor position"
+    expr: "(sofr - rrp_offering) * 100"
+    description: "Private GC repo premium vs floor (MMF reallocation sensitivity)"
+
+  - key: spread_tgcr_rrp
+    label: "TGCR - ON RRP Offering Spread"
+    unit: "bps"
+    expr: "(tgcr - rrp_offering) * 100"
+    description: "Tri-party repo premium vs floor"
 
   - key: spread_dpcredit_effr
     label: "Primary Credit - EFFR Spread"
@@ -290,7 +654,71 @@ derived:
     label: "EFFR vs Target Midpoint"
     unit: "bps"
     expr: "(effr - (dfedtaru + dfedtarl) / 2) * 100"
-    description: "How far EFFR is from FOMC target center"
+    description: "EFFR deviation from FOMC target midpoint"
+
+  - key: tgcr_vs_target_mid
+    label: "TGCR vs Target Midpoint"
+    unit: "bps"
+    expr: "(tgcr - (dfedtaru + dfedtarl) / 2) * 100"
+    description: "Repo benchmark deviation from target midpoint"
+
+  # Composite: a single money-market tightness gauge vs IORB
+  - key: mm_tightness_bps
+    label: "Money-Market Tightness Index (vs IORB)"
+    unit: "bps"
+    expr: "(((effr + obfr + sofr + tgcr) / 4) - iorb) * 100"
+    description: "Average of key unsecured+secured overnight rates minus IORB (bps)"
+
+  # --------------------------------------------------------------------------
+  # Distribution / Dispersion Metrics (bps)
+  # --------------------------------------------------------------------------
+  - key: effr_iqr_bp
+    label: "EFFR Interquartile Range (75-25)"
+    unit: "bps"
+    expr: "(effr_p75 - effr_p25) * 100"
+    description: "Within-market dispersion (IQR)"
+
+  - key: effr_tail_bp
+    label: "EFFR Tail Range (99-1)"
+    unit: "bps"
+    expr: "(effr_p99 - effr_p1) * 100"
+    description: "Tail dispersion (higher = more stress / segmentation)"
+
+  - key: sofr_iqr_bp
+    label: "SOFR Interquartile Range (75-25)"
+    unit: "bps"
+    expr: "(sofr_p75 - sofr_p25) * 100"
+    description: "SOFR dispersion (IQR)"
+
+  - key: sofr_tail_bp
+    label: "SOFR Tail Range (99-1)"
+    unit: "bps"
+    expr: "(sofr_p99 - sofr_p1) * 100"
+    description: "SOFR tail dispersion"
+
+  - key: tgcr_iqr_bp
+    label: "TGCR Interquartile Range (75-25)"
+    unit: "bps"
+    expr: "(tgcr_p75 - tgcr_p25) * 100"
+    description: "TGCR dispersion (IQR)"
+
+  - key: tgcr_tail_bp
+    label: "TGCR Tail Range (99-1)"
+    unit: "bps"
+    expr: "(tgcr_p99 - tgcr_p1) * 100"
+    description: "TGCR tail dispersion"
+
+  - key: obfr_iqr_bp
+    label: "OBFR Interquartile Range (75-25)"
+    unit: "bps"
+    expr: "(obfr_p75 - obfr_p25) * 100"
+    description: "OBFR dispersion (IQR)"
+
+  - key: obfr_tail_bp
+    label: "OBFR Tail Range (99-1)"
+    unit: "bps"
+    expr: "(obfr_p99 - obfr_p1) * 100"
+    description: "OBFR tail dispersion"
 
   # --------------------------------------------------------------------------
   # Liquidity Structure Ratios
@@ -299,7 +727,13 @@ derived:
     label: "RRP / Reserves Ratio"
     unit: "ratio"
     expr: "rrp_usage_mil / reserves_mil"
-    description: "High ratio = excess cash; declining = liquidity normalizing"
+    description: "High ratio = cash parked at Fed; lower ratio shifts liquidity to banks/bills"
+
+  - key: rrp_share_of_liquidity
+    label: "RRP Share of (Reserves + RRP)"
+    unit: "percent"
+    expr: "(rrp_usage_mil / (reserves_mil + rrp_usage_mil)) * 100"
+    description: "RRP as share of headline Fed-liability liquidity"
 
   - key: ratio_tga_to_reserves
     label: "TGA / Reserves Ratio"
@@ -308,34 +742,81 @@ derived:
     description: "Treasury cash relative to bank reserves"
 
   - key: reserves_plus_rrp_mil
-    label: "Reserves + RRP (Total Liquidity)"
+    label: "Reserves + RRP (Headline Liquidity)"
     unit: "usd_millions"
     expr: "reserves_mil + rrp_usage_mil"
-    description: "Total system liquidity in Fed liabilities"
+    description: "Total reserves + ON RRP (headline liquidity parked at Fed)"
 
-  # --------------------------------------------------------------------------
-  # Net Liquidity Proxy (Trading Signal)
-  # --------------------------------------------------------------------------
+  # More conservative 'market-usable' liquidity proxy: remove currency in circulation.
+  - key: market_net_liquidity_mil
+    label: "Market Net Liquidity Proxy"
+    unit: "usd_millions"
+    expr: "walcl_mil - tga_mil - rrp_usage_mil - currency_mil"
+    description: "Net liquidity proxy adjusted for currency (structural reserve drain)"
+
   - key: net_liquidity_mil
     label: "Net Liquidity Proxy"
     unit: "usd_millions"
     expr: "walcl_mil - tga_mil - rrp_usage_mil"
-    description: "WALCL - TGA - RRP: common risk-asset correlation proxy"
+    description: "Common risk-asset proxy: WALCL - TGA - RRP"
 
   - key: net_liquidity_bil
     label: "Net Liquidity (Billions)"
     unit: "usd_billions"
     expr: "(walcl_mil - tga_mil - rrp_usage_mil) / 1000.0"
-    description: "Same metric in billions for readability"
+    description: "Net liquidity proxy in billions"
+
+  # Reserves sufficiency: reserves relative to the banking system size.
+  - key: reserves_to_bank_assets_pct
+    label: "Reserves as % of Bank Assets"
+    unit: "percent"
+    expr: "((reserves_mil / 1000.0) / bank_assets_bil) * 100"
+    description: "Market-based work suggests the reserves demand curve steepens below a threshold of reserves-to-assets"
 
   # --------------------------------------------------------------------------
-  # QT Progress Tracking
+  # QT / Balance Sheet Composition
   # --------------------------------------------------------------------------
   - key: walcl_from_peak_mil
     label: "WALCL Change from Peak"
     unit: "usd_millions"
-    expr: "walcl_mil - 8965486"  # Peak was ~$8.965T in April 2022
-    description: "How much Fed has shrunk balance sheet from QE peak"
+    expr: "walcl_mil - 8965486" # Peak was ~$8.965T in April 2022
+    description: "How much total assets have changed since QE peak"
+
+  - key: soma_bills_share_pct
+    label: "SOMA Bills Share of Treasuries"
+    unit: "percent"
+    expr: "(soma_tsy_bills_mil / soma_treasuries_mil) * 100"
+    description: "Tracks shifts toward bills vs coupons inside the Treasury SOMA"
+
+  - key: soma_mbs_share_pct
+    label: "SOMA MBS Share of Total Securities"
+    unit: "percent"
+    expr: "(soma_mbs_mil / soma_total_mil) * 100"
+    description: "Tracks MBS runoff progress / composition"
+
+  # --------------------------------------------------------------------------
+  # Credit / Risk Metrics (unit conversions)
+  # --------------------------------------------------------------------------
+  - key: hy_oas_bp
+    label: "High Yield OAS (bps)"
+    unit: "bps"
+    expr: "hy_oas * 100"
+    description: "Convert HY OAS from % to bps"
+
+  - key: ig_oas_bp
+    label: "Investment Grade OAS (bps)"
+    unit: "bps"
+    expr: "ig_oas * 100"
+    description: "Convert IG OAS from % to bps"
+
+  # --------------------------------------------------------------------------
+  # Treasury Curve (bps)
+  # --------------------------------------------------------------------------
+  - key: curve_10y3m_bp
+    label: "10Y-3M Treasury Curve (bps)"
+    unit: "bps"
+    expr: "t10y3m * 100"
+    description: "10Y minus 3M curve converted to bps"
 
 # ============================================================================
 # METRICS CALCULATION
@@ -350,11 +831,11 @@ metrics:
     - name: "d5"
       type: "diff"
       periods: 5
-      description: "5-day (weekly) change"
+      description: "5-day change"
     - name: "d20"
       type: "diff"
       periods: 20
-      description: "20-day (monthly) change"
+      description: "20-day change"
     - name: "pct1"
       type: "pct_change"
       periods: 1
@@ -374,67 +855,136 @@ metrics:
       type: "rolling_mean"
       window: 20
       description: "20-day moving average"
+    - name: "ma60"
+      type: "rolling_mean"
+      window: 60
+      description: "60-day moving average"
     - name: "std20"
       type: "rolling_std"
       window: 20
       description: "20-day rolling standard deviation"
+    - name: "std60"
+      type: "rolling_std"
+      window: 60
+      description: "60-day rolling standard deviation"
     - name: "zscore20"
       type: "zscore"
       window: 20
       description: "Z-score vs 20-day mean/std"
+    - name: "zscore60"
+      type: "zscore"
+      window: 60
+      description: "Z-score vs 60-day mean/std"
+    - name: "zscore252"
+      type: "zscore"
+      window: 252
+      description: "Z-score vs 1-year (252 trading days)"
 
 # ============================================================================
 # ALERT RULES
 # ============================================================================
 alerts:
   # --------------------------------------------------------------------------
-  # Rate Corridor Alerts
+  # Rate corridor / implementation
   # --------------------------------------------------------------------------
   - key: effr_vs_target_mid
-    rule: "abs(value) > 5"
+    rule: "abs(ma5) > 5"
     severity: "warning"
-    note: "EFFR偏离目标中点超过5bp"
+    note: "EFFR偏离目标中点超过5bp（5日均值）"
+    category: "rates"
+
+  - key: effr_vs_target_mid
+    rule: "abs(ma5) > 10"
+    severity: "critical"
+    note: "EFFR偏离目标中点超过10bp（5日均值，可能是实施偏差/资金压力）"
+    category: "rates"
+
+  - key: spread_effr_iorb
+    rule: "ma5 > -2"
+    severity: "warning"
+    note: "EFFR接近IORB（5日均值>-2bp），准备金可能趋紧"
+    category: "rates"
+
+  - key: spread_effr_iorb
+    rule: "ma5 > 0"
+    severity: "critical"
+    note: "EFFR高于IORB（5日均值>0bp），资金市场明显趋紧"
     category: "rates"
 
   - key: spread_sofr_effr
-    rule: "abs(value) > 10"
+    rule: "abs(ma5) > 10"
     severity: "warning"
-    note: "SOFR-EFFR利差超过10bp（repo市场压力信号）"
+    note: "SOFR-EFFR利差超过10bp（5日均值，repo/抵押品压力）"
     category: "rates"
 
   - key: spread_sofr_effr
-    rule: "abs(value) > 25"
+    rule: "abs(ma5) > 25"
     severity: "critical"
     note: "SOFR-EFFR利差超过25bp（严重repo压力）"
     category: "rates"
 
-  - key: spread_effr_iorb
-    rule: "value > 3"
+  # MMF reallocation sensitivity: private repo often needs only a small premium vs ON RRP offering.
+  - key: spread_sofr_rrp
+    rule: "ma5 > 5"
     severity: "warning"
-    note: "EFFR高于IORB超过3bp（资金偏紧）"
+    note: "SOFR高于ON RRP OFFER超过5bp（5日均值，MMF可能更倾向私营repo）"
+    category: "rates"
+
+  - key: spread_tgcr_rrp
+    rule: "ma5 > 5"
+    severity: "warning"
+    note: "TGCR高于ON RRP OFFER超过5bp（5日均值，tri-party repo premium上升）"
+    category: "rates"
+
+  - key: mm_tightness_bps
+    rule: "ma5 > 0"
+    severity: "warning"
+    note: "综合资金紧张指数（vs IORB）转正（5日均值>0bp）"
+    category: "rates"
+
+  - key: mm_tightness_bps
+    rule: "ma5 > 5"
+    severity: "critical"
+    note: "综合资金紧张指数（vs IORB）>5bp（5日均值，资金市场显著偏紧）"
     category: "rates"
 
   # --------------------------------------------------------------------------
-  # Liquidity Pool Alerts
+  # Distribution / tail-risk alerts (segmentation / dispersion)
   # --------------------------------------------------------------------------
-  - key: rrp_usage_bil
-    rule: "d1 < -100"
-    severity: "info"
-    note: "RRP单日流出超$100B（潜在risk-on信号）"
-    category: "liquidity"
-
-  - key: rrp_usage_bil
-    rule: "d5 < -200"
+  - key: effr_tail_bp
+    rule: "zscore20 > 2"
     severity: "warning"
-    note: "RRP周流出超$200B（流动性快速收缩）"
+    note: "EFFR尾部离散度(99-1)出现异常放大（20日Z>2）"
+    category: "funding_distribution"
+
+  - key: sofr_tail_bp
+    rule: "zscore20 > 2"
+    severity: "warning"
+    note: "SOFR尾部离散度(99-1)出现异常放大（20日Z>2）"
+    category: "funding_distribution"
+
+  - key: tgcr_tail_bp
+    rule: "zscore20 > 2"
+    severity: "warning"
+    note: "TGCR尾部离散度(99-1)出现异常放大（20日Z>2）"
+    category: "funding_distribution"
+
+  # --------------------------------------------------------------------------
+  # Liquidity pool alerts
+  # --------------------------------------------------------------------------
+  - key: reserves_to_bank_assets_pct
+    rule: "value < 13"
+    severity: "warning"
+    note: "准备金/银行资产比率低于13%（接近准备金需求曲线更陡的区间）"
     category: "liquidity"
 
-  - key: rrp_usage_bil
-    rule: "value < 100"
+  - key: reserves_to_bank_assets_pct
+    rule: "value < 12"
     severity: "critical"
-    note: "RRP余额低于$100B（接近耗尽，准备金可能变稀缺）"
+    note: "准备金/银行资产比率低于12%（更可能进入准备金稀缺区）"
     category: "liquidity"
 
+  # Keep absolute reserves thresholds as a backstop (headline level).
   - key: reserves_mil
     rule: "value < 3000000"
     severity: "critical"
@@ -447,6 +997,25 @@ alerts:
     note: "准备金低于$3.2T（进入关注区间）"
     category: "liquidity"
 
+  # RRP: avoid persistent false alarms when RRP is structurally low; focus on large flows/inflows.
+  - key: rrp_usage_bil
+    rule: "abs(d1) > 100"
+    severity: "info"
+    note: "RRP单日变动超$100B（资金在RRP与私营市场快速切换）"
+    category: "liquidity"
+
+  - key: rrp_usage_bil
+    rule: "abs(d5) > 250"
+    severity: "warning"
+    note: "RRP 5日变动超$250B（流动性再分配加速）"
+    category: "liquidity"
+
+  - key: rrp_usage_bil
+    rule: "value < 50"
+    severity: "info"
+    note: "RRP余额低于$50B（缓冲垫变薄，需更关注准备金与资金利差）"
+    category: "liquidity"
+
   - key: net_liquidity_mil
     rule: "d5 < -200000"
     severity: "warning"
@@ -456,7 +1025,13 @@ alerts:
   - key: net_liquidity_mil
     rule: "d20 < -500000"
     severity: "critical"
-    note: "Net Liquidity 月度下降超$500B（重大流动性收缩）"
+    note: "Net Liquidity 20日下降超$500B（重大流动性收缩）"
+    category: "liquidity"
+
+  - key: market_net_liquidity_mil
+    rule: "d20 < -500000"
+    severity: "critical"
+    note: "Market Net Liquidity(扣除currency) 20日下降超$500B"
     category: "liquidity"
 
   - key: tga_mil
@@ -468,40 +1043,53 @@ alerts:
   - key: tga_mil
     rule: "value < 100000"
     severity: "warning"
-    note: "TGA低于$100B（接近债务上限耗尽）"
+    note: "TGA低于$100B（接近债务上限/现金管理压力区间）"
     category: "liquidity"
 
   # --------------------------------------------------------------------------
-  # Stress Signal Alerts
+  # Stress / backstop usage
   # --------------------------------------------------------------------------
   - key: dw_primary_mil
-    rule: "value > 5000"
-    severity: "warning"
-    note: "贴现窗口使用超$5B（银行流动性压力）"
-    category: "stress"
-
-  - key: dw_primary_mil
-    rule: "value > 20000"
-    severity: "critical"
-    note: "贴现窗口使用超$20B（类似SVB危机水平）"
-    category: "stress"
-
-  - key: dw_primary_mil
-    rule: "d1 > 5000"
-    severity: "critical"
-    note: "贴现窗口单周飙升超$5B（突发流动性危机信号）"
-    category: "stress"
-
-  - key: srf_usage_mil
-    rule: "value > 1000"
-    severity: "warning"
-    note: "SRF使用超$1B（repo市场压力）"
-    category: "stress"
-
-  - key: srf_usage_mil
     rule: "value > 10000"
+    severity: "warning"
+    note: "贴现窗口使用超$10B（银行流动性压力上升）"
+    category: "stress"
+
+  - key: dw_primary_mil
+    rule: "value > 50000"
     severity: "critical"
-    note: "SRF使用超$10B（严重repo市场失灵）"
+    note: "贴现窗口使用超$50B（显著银行压力/系统性事件风险）"
+    category: "stress"
+
+  - key: dw_primary_mil
+    rule: "d1 > 25000"
+    severity: "critical"
+    note: "贴现窗口周度跳升超$25B（突发流动性冲击）"
+    category: "stress"
+
+  # NOTE: srf_usage_mil not available on FRED
+  # - key: srf_usage_mil
+  #   rule: "value > 5000"
+  #   severity: "warning"
+  #   note: "SRF使用超$5B（repo市场压力）"
+  #   category: "stress"
+
+  # - key: srf_usage_mil
+  #   rule: "value > 25000"
+  #   severity: "critical"
+  #   note: "SRF使用超$25B（严重repo市场失灵/融资压力）"
+  #   category: "stress"
+
+  - key: repo_overnight_bil
+    rule: "value > 50"
+    severity: "warning"
+    note: "Fed临时repo操作使用超$50B（市场对流动性支持需求上升）"
+    category: "stress"
+
+  - key: repo_overnight_bil
+    rule: "value > 100"
+    severity: "critical"
+    note: "Fed临时repo操作使用超$100B（显著市场压力）"
     category: "stress"
 
   - key: swaps_mil
@@ -513,16 +1101,16 @@ alerts:
   - key: swaps_mil
     rule: "value > 50000"
     severity: "critical"
-    note: "央行互换超$50B（全球美元危机水平）"
+    note: "央行互换超$50B（全球美元压力显著）"
     category: "stress"
 
   # --------------------------------------------------------------------------
-  # QT Progress Alerts
+  # QT / balance sheet
   # --------------------------------------------------------------------------
   - key: walcl_mil
     rule: "d5 > 50000"
     severity: "info"
-    note: "Fed资产周增加超$500亿（QT暂停或干预信号）"
+    note: "Fed资产周增加超$500亿（QT暂停/干预信号）"
     category: "balance_sheet"
 
   - key: walcl_mil
@@ -531,70 +1119,181 @@ alerts:
     note: "Fed资产周减少超$300亿（QT加速）"
     category: "balance_sheet"
 
+  # --------------------------------------------------------------------------
+  # Broader financial conditions (context)
+  # --------------------------------------------------------------------------
+  - key: stl_fsi
+    rule: "value > 0.5"
+    severity: "warning"
+    note: "STLFSI高于0.5（金融压力偏高）"
+    category: "financial_conditions"
+
+  - key: stl_fsi
+    rule: "value > 1.0"
+    severity: "critical"
+    note: "STLFSI高于1.0（金融压力显著）"
+    category: "financial_conditions"
+
+  - key: nfci
+    rule: "value > 0.5"
+    severity: "warning"
+    note: "NFCI高于0.5（金融条件偏紧）"
+    category: "financial_conditions"
+
+  - key: nfci
+    rule: "value > 1.0"
+    severity: "critical"
+    note: "NFCI高于1.0（金融条件显著收紧）"
+    category: "financial_conditions"
+
+  - key: hy_oas_bp
+    rule: "value > 600"
+    severity: "warning"
+    note: "高收益信用利差>600bp（风险偏好下降/信用压力）"
+    category: "financial_conditions"
+
+  - key: hy_oas_bp
+    rule: "value > 800"
+    severity: "critical"
+    note: "高收益信用利差>800bp（信用压力显著）"
+    category: "financial_conditions"
+
+  - key: hy_oas_bp
+    rule: "d5 > 100"
+    severity: "warning"
+    note: "高收益信用利差5日扩张>100bp（快速风险恶化）"
+    category: "financial_conditions"
+
+  - key: vix
+    rule: "value > 25"
+    severity: "warning"
+    note: "VIX>25（市场波动上升）"
+    category: "financial_conditions"
+
+  - key: vix
+    rule: "value > 35"
+    severity: "critical"
+    note: "VIX>35（显著风险事件/流动性冲击）"
+    category: "financial_conditions"
+
+  # --------------------------------------------------------------------------
+  # Treasury curve (macro signal)
+  # --------------------------------------------------------------------------
+  - key: curve_10y3m_bp
+    rule: "value < -50"
+    severity: "warning"
+    note: "10Y-3M曲线倒挂超过50bp（宏观压力信号）"
+    category: "rates_curve"
+
+  - key: curve_10y3m_bp
+    rule: "value < -100"
+    severity: "critical"
+    note: "10Y-3M曲线倒挂超过100bp（显著倒挂）"
+    category: "rates_curve"
+
 # ============================================================================
 # DASHBOARD PANEL CONFIGURATION
 # ============================================================================
 panel:
-  refresh_interval_seconds: 300  # 5 minutes
+  refresh_interval_seconds: 300 # 5 minutes
 
   charts:
-    - title: "Interest Rate Corridor"
-      series: ["dfedtarl", "rrp_award", "effr", "iorb", "sofr", "dfedtaru", "dpcredit"]
+    - title: "Interest Rate Corridor & Reference Rates"
+      series: ["dfedtarl", "rrp_offering", "effr", "iorb", "sofr", "tgcr", "dfedtaru", "dpcredit", "srf_rate"]
       chart_type: "line"
       y_axis_label: "Rate (%)"
-      height: 400
+      height: 420
 
-    - title: "Rate Spreads (bps)"
-      series: ["spread_effr_iorb", "spread_sofr_effr", "effr_vs_target_mid"]
+    - title: "Key Money-Market Spreads (bps)"
+      series: ["effr_vs_target_mid", "spread_effr_iorb", "spread_sofr_effr", "spread_sofr_rrp", "mm_tightness_bps"]
       chart_type: "line"
       y_axis_label: "Spread (bps)"
       reference_line: 0
-      height: 300
+      height: 340
 
-    - title: "ON RRP Usage"
-      series: ["rrp_usage_bil"]
-      chart_type: "area"
-      y_axis_label: "USD Billions"
-      height: 300
-
-    - title: "Reserves & TGA"
-      series: ["reserves_mil", "tga_mil"]
+    - title: "Money-Market Tail Dispersion (bps)"
+      series: ["effr_tail_bp", "obfr_tail_bp", "sofr_tail_bp", "tgcr_tail_bp"]
       chart_type: "line"
-      y_axis_label: "USD Millions"
-      height: 350
+      y_axis_label: "Tail Range (bps)"
+      height: 320
 
-    - title: "Fed Balance Sheet (WALCL)"
-      series: ["walcl_mil"]
-      chart_type: "area"
-      y_axis_label: "USD Millions"
-      height: 300
-
-    - title: "Net Liquidity Proxy"
-      series: ["net_liquidity_bil"]
+    - title: "Reference Rate Volumes"
+      series: ["effr_volume_bil", "obfr_volume_bil", "sofr_volume_bil", "tgcr_volume_bil"]
       chart_type: "line"
       y_axis_label: "USD Billions"
-      height: 350
+      height: 320
 
-    - title: "Stress Indicators"
-      series: ["dw_primary_mil", "srf_usage_mil", "swaps_mil"]
+    - title: "ON RRP & Temporary Repo Operations"
+      series: ["rrp_usage_bil", "repo_overnight_bil"]
+      chart_type: "area"
+      y_axis_label: "USD Billions"
+      height: 320
+
+    - title: "Reserves, TGA, Currency"
+      series: ["reserves_mil", "tga_mil", "currency_mil"]
+      chart_type: "line"
+      y_axis_label: "USD Millions"
+      height: 360
+
+    - title: "Liquidity Ratios"
+      series: ["reserves_to_bank_assets_pct", "rrp_share_of_liquidity", "ratio_rrp_to_reserves"]
+      chart_type: "line"
+      y_axis_label: "Percent / Ratio"
+      height: 320
+
+    - title: "Fed Balance Sheet: Total Assets vs SOMA (Securities Held Outright)"
+      series: ["walcl_mil", "soma_total_mil"]
+      chart_type: "line"
+      y_axis_label: "USD Millions"
+      height: 320
+
+    - title: "QT Composition: Treasuries (Bills/Coupons) & MBS"
+      series: ["soma_treasuries_mil", "soma_tsy_bills_mil", "soma_tsy_coupons_nominal_mil", "soma_mbs_mil"]
+      chart_type: "line"
+      y_axis_label: "USD Millions"
+      height: 360
+
+    - title: "Stress Backstops (Outstanding)"
+      series: ["dw_primary_mil", "swaps_mil", "foreign_official_repo_mil"]
       chart_type: "bar"
       y_axis_label: "USD Millions"
-      height: 350
+      height: 360
 
-    - title: "Liquidity Structure"
-      series: ["ratio_rrp_to_reserves"]
+    - title: "Financial Conditions"
+      series: ["nfci", "stl_fsi", "kc_fsi"]
       chart_type: "line"
-      y_axis_label: "Ratio"
-      height: 300
+      y_axis_label: "Index"
+      reference_line: 0
+      height: 320
+
+    - title: "Credit Spreads & Volatility"
+      series: ["hy_oas_bp", "ig_oas_bp", "vix"]
+      chart_type: "line"
+      y_axis_label: "bps / index"
+      height: 320
+
+    - title: "Treasury Yields & Curve"
+      series: ["dgs3mo", "dgs2", "dgs10", "curve_10y3m_bp"]
+      chart_type: "line"
+      y_axis_label: "% / bps"
+      height: 320
 
   tables:
-    - title: "Current Values"
-      series: ["effr", "iorb", "rrp_award", "sofr", "rrp_usage_bil", "reserves_mil", "tga_mil", "net_liquidity_bil"]
-      show_columns: ["value", "d1", "d5", "d20"]
+    - title: "Current Policy & Funding Snapshot"
+      series: ["effr", "iorb", "rrp_offering", "sofr", "tgcr", "obfr", "spread_effr_iorb", "spread_sofr_rrp", "mm_tightness_bps"]
+      show_columns: ["value", "d1", "d5", "zscore20"]
+
+    - title: "Liquidity & Balance Sheet"
+      series: ["rrp_usage_bil", "reserves_mil", "tga_mil", "currency_mil", "net_liquidity_bil", "market_net_liquidity_mil", "reserves_to_bank_assets_pct", "soma_total_mil", "walcl_mil"]
+      show_columns: ["value", "d5", "d20", "zscore60"]
 
     - title: "Stress Dashboard"
-      series: ["dw_primary_mil", "srf_usage_mil", "swaps_mil", "fima_repo_mil"]
-      show_columns: ["value", "d1", "ma20"]
+      series: ["dw_primary_mil", "repo_overnight_bil", "swaps_mil", "foreign_official_repo_mil"]
+      show_columns: ["value", "d1", "ma20", "zscore60"]
+
+    - title: "Risk Context"
+      series: ["stl_fsi", "nfci", "hy_oas_bp", "vix", "curve_10y3m_bp"]
+      show_columns: ["value", "d5", "zscore60"]
 
 # ============================================================================
 # SCHEDULER
@@ -604,7 +1303,7 @@ schedule:
   fetch_daily:
     cron: "0 7 * * 1-5"
     timezone: "Asia/Tokyo"
-    description: "Fetch daily FRED data on weekday mornings"
+    description: "Fetch daily data on weekday mornings"
 
   # Weekly data fetch (Thursday after H.4.1 release)
   fetch_weekly:
@@ -630,14 +1329,11 @@ schedule:
 database:
   type: "sqlite"
   path: "fed_monitor.db"
-  # Alternative: PostgreSQL for production
-  # type: "postgresql"
-  # connection_env: "DATABASE_URL"
 
   tables:
     observations:
-      description: "Raw FRED observations"
-      retention_days: 3650  # 10 years
+      description: "Raw observations"
+      retention_days: 3650
 
     derived_metrics:
       description: "Calculated derived values"

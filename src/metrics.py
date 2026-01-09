@@ -214,8 +214,9 @@ def get_latest_values() -> dict[str, dict[str, Any]]:
             "date": latest_date.strftime("%Y-%m-%d"),
         }
 
-        # Add changes and rolling if available
-        for suffix in ["d1", "d5", "d20", "pct1", "pct5", "ma5", "ma20", "std20", "zscore20"]:
+        # Add changes and rolling if available (dynamically from config)
+        suffixes = [c["name"] for c in config.metric_changes] + [r["name"] for r in config.metric_rolling]
+        for suffix in suffixes:
             col = f"{key}_{suffix}"
             if col in df.columns:
                 val = latest_row.get(col)

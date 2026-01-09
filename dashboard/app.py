@@ -154,9 +154,10 @@ def create_line_chart(
         fig.add_trace(go.Scatter(
             x=df.index,
             y=df[key],
-            mode="lines",
+            mode="lines+markers",
             name=label,
-            line=dict(color=color, width=2),
+            line=dict(color=color, width=3),
+            marker=dict(size=4, color=color),
             hovertemplate=f"{label}: %{{y:.4f}}<extra></extra>",
         ))
 
@@ -169,7 +170,10 @@ def create_line_chart(
         yaxis_title=y_label,
         height=height,
         hovermode="x unified",
+        template="plotly_dark",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
     )
 
     return fig
@@ -197,10 +201,11 @@ def create_area_chart(
         fig.add_trace(go.Scatter(
             x=df.index,
             y=df[key],
-            mode="lines",
+            mode="lines+markers",
             fill="tozeroy",
             name=label,
-            line=dict(color=color, width=2),
+            line=dict(color=color, width=3),
+            marker=dict(size=4, color=color),
             fillcolor=hex_to_rgba(color, 0.3),
             hovertemplate=f"{label}: %{{y:,.0f}}<extra></extra>",
         ))
@@ -211,6 +216,9 @@ def create_area_chart(
         yaxis_title=y_label,
         height=height,
         hovermode="x unified",
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
     )
 
     return fig
@@ -250,6 +258,9 @@ def create_bar_chart(
         height=height,
         hovermode="x unified",
         barmode="group",
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
     )
 
     return fig

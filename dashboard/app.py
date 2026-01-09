@@ -415,6 +415,6 @@ except Exception as e:
 st.markdown("---")
 st.caption(
     "Wayne's Macro Dashboard · "
-    "[AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html) · "
+    "[MIT](https://opensource.org/licenses/MIT) · "
     "[GitHub](https://github.com/USERNAME/fed_monitor)"  # TODO: Update with actual repo URL
 )

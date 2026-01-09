@@ -4,7 +4,9 @@ A Fed monetary policy monitoring system that fetches FRED data, calculates deriv
 
 ## License
 
-This project is licensed under AGPL-3.0.
+MIT License - Use it however you want.
 
-You're free to use, modify, and share it, but any derivative work
-(including SaaS) must also be open-sourced under the same license.
+## Contributing
+
+Ideas, suggestions, and PRs are welcome.
+If you find this useful or want to improve it, feel free to open an issue or submit a PR.

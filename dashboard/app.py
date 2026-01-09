@@ -25,8 +25,8 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 
 # Page config
 st.set_page_config(
-    page_title="Fed Monitor",
-    page_icon="🏦",
+    page_title="Wayne's Macro Dashboard",
+    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -41,7 +41,7 @@ config = get_config()
 # -----------------------------------------------------------------------------
 # Sidebar
 # -----------------------------------------------------------------------------
-st.sidebar.title("Fed Monitor")
+st.sidebar.title("Wayne's Macro Dashboard")
 st.sidebar.markdown(f"*Config v{config.version}*")
 
 # Date range selector
@@ -294,7 +294,7 @@ def format_change(value: float | None, is_pct: bool = False) -> str:
 # -----------------------------------------------------------------------------
 # Main Content
 # -----------------------------------------------------------------------------
-st.title("Fed Monetary Policy Monitor")
+st.title("Wayne's Macro Dashboard")
 st.markdown(f"Data from **{start_str}** to **{end_str}**")
 
 # -----------------------------------------------------------------------------
@@ -413,7 +413,8 @@ except Exception as e:
 # Footer
 # -----------------------------------------------------------------------------
 st.markdown("---")
-st.markdown(
-    f"*Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} "
-    f"({config.timezone})*"
+st.caption(
+    "Wayne's Macro Dashboard · "
+    "[AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html) · "
+    "[GitHub](https://github.com/USERNAME/fed_monitor)"  # TODO: Update with actual repo URL
 )

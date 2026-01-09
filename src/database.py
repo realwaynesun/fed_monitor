@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from .config import get_config, get_secret
+from .config import get_config
 
 
 def get_db_path() -> Path:
@@ -19,27 +19,10 @@ def get_db_path() -> Path:
     return Path(__file__).parent.parent / config.database_path
 
 
-def _use_turso() -> bool:
-    """Check if Turso cloud database is configured."""
-    return bool(get_secret("TURSO_DATABASE_URL"))
-
-
-def _get_turso_connection():
-    """Get a Turso/libsql connection."""
-    import libsql_experimental as libsql
-    url = get_secret("TURSO_DATABASE_URL")
-    token = get_secret("TURSO_AUTH_TOKEN")
-    # Turso requires sync=True for remote connections
-    return libsql.connect(url, auth_token=token, sync=True)
-
-
 def init_db() -> None:
     """Initialize database schema."""
-    if _use_turso():
-        conn = _get_turso_connection()
-    else:
-        db_path = get_db_path()
-        conn = sqlite3.connect(db_path)
+    db_path = get_db_path()
+    conn = sqlite3.connect(db_path)
 
     try:
         # Raw FRED observations (use INTEGER PRIMARY KEY for Turso compatibility)
@@ -115,11 +98,8 @@ def init_db() -> None:
 @contextmanager
 def get_connection():
     """Context manager for database connections."""
-    if _use_turso():
-        conn = _get_turso_connection()
-    else:
-        conn = sqlite3.connect(get_db_path())
-        conn.row_factory = sqlite3.Row
+    conn = sqlite3.connect(get_db_path())
+    conn.row_factory = sqlite3.Row
     try:
         yield conn
     finally:

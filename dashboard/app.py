@@ -83,8 +83,14 @@ st.sidebar.markdown(f"**Timezone:** {config.timezone}")
 # -----------------------------------------------------------------------------
 @st.cache_data(ttl=300)
 def load_data(start: str, end: str) -> pd.DataFrame:
-    """Load and calculate all metrics."""
-    return calculate_all_metrics(start, end)
+    """Load and calculate all metrics (with forward-fill for tables/calculations)."""
+    return calculate_all_metrics(start, end, ffill=True)
+
+
+@st.cache_data(ttl=300)
+def load_chart_data(start: str, end: str) -> pd.DataFrame:
+    """Load data for charts (no forward-fill, shows actual data points)."""
+    return calculate_all_metrics(start, end, ffill=False)
 
 
 @st.cache_data(ttl=300)
@@ -122,7 +128,8 @@ if not check_and_fetch_data():
 
 # Load data
 try:
-    df = load_data(start_str, end_str)
+    df = load_data(start_str, end_str)  # Forward-filled for tables/calculations
+    df_chart = load_chart_data(start_str, end_str)  # Actual data points for charts
     latest = load_latest()
 except Exception as e:
     st.error(f"Error loading data: {e}")
@@ -326,7 +333,7 @@ st.title("Wayne's Macro Dashboard")
 st.markdown(f"Data from **{start_str}** to **{end_str}**")
 
 # -----------------------------------------------------------------------------
-# Charts
+# Charts (using df_chart without forward-fill for accurate data points)
 # -----------------------------------------------------------------------------
 for chart_def in config.panel_charts:
     title = chart_def["title"]
@@ -337,13 +344,13 @@ for chart_def in config.panel_charts:
     ref_line = chart_def.get("reference_line")
 
     if chart_type == "line":
-        fig = create_line_chart(df, series, title, y_label, height, ref_line)
+        fig = create_line_chart(df_chart, series, title, y_label, height, ref_line)
     elif chart_type == "area":
-        fig = create_area_chart(df, series, title, y_label, height)
+        fig = create_area_chart(df_chart, series, title, y_label, height)
     elif chart_type == "bar":
-        fig = create_bar_chart(df, series, title, y_label, height)
+        fig = create_bar_chart(df_chart, series, title, y_label, height)
     else:
-        fig = create_line_chart(df, series, title, y_label, height, ref_line)
+        fig = create_line_chart(df_chart, series, title, y_label, height, ref_line)
 
     if fig:
         st.plotly_chart(fig, use_container_width=True)

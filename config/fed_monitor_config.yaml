@@ -1,0 +1,652 @@
+# fed_monitor_config.yaml
+# Fed Monetary Policy Monitoring System - Complete Configuration
+# Version: 2.0 (Merged & Enhanced)
+
+version: "2.0"
+timezone: "Asia/Tokyo"
+
+# ============================================================================
+# DATA SOURCES
+# ============================================================================
+data_sources:
+  fred:
+    base_url: "https://api.stlouisfed.org/fred"
+    file_type: "json"
+    api_key_env: "FRED_API_KEY"
+    # Weekly data will be forward-filled to daily for consistent panel
+    default_align: "ffill_to_daily"
+    # Rate limiting: FRED allows 120 requests per minute
+    rate_limit:
+      requests_per_minute: 100
+      retry_delay_seconds: 5
+
+# ============================================================================
+# NOTIFICATIONS
+# ============================================================================
+notifications:
+  telegram:
+    enabled: true
+    bot_token_env: "TELEGRAM_BOT_TOKEN"
+    chat_id_env: "TELEGRAM_CHAT_ID"
+    # Message format: markdown or html
+    parse_mode: "markdown"
+  
+  webhook:
+    enabled: false
+    url_env: "ALERT_WEBHOOK_URL"
+    method: "POST"
+    headers:
+      Content-Type: "application/json"
+  
+  email:
+    enabled: false
+    smtp_host_env: "SMTP_HOST"
+    smtp_port: 587
+    username_env: "SMTP_USERNAME"
+    password_env: "SMTP_PASSWORD"
+    from_addr_env: "ALERT_FROM_EMAIL"
+    to_addrs_env: "ALERT_TO_EMAILS"  # comma-separated
+
+# ============================================================================
+# SERIES DEFINITIONS
+# ============================================================================
+series:
+  # --------------------------------------------------------------------------
+  # RATES - Interest Rate Corridor
+  # --------------------------------------------------------------------------
+  - key: effr
+    series_id: "EFFR"
+    label: "Effective Federal Funds Rate"
+    frequency: "daily"
+    unit: "percent"
+    description: "Volume-weighted median of overnight fed funds transactions"
+    transform: { type: "identity" }
+
+  - key: iorb
+    series_id: "IORB"
+    label: "Interest Rate on Reserve Balances"
+    frequency: "daily"
+    unit: "percent"
+    description: "Rate paid on bank reserves held at Fed - corridor anchor"
+    transform: { type: "identity" }
+
+  - key: rrp_award
+    series_id: "RRPONTSYAWARD"
+    label: "ON RRP Award Rate"
+    frequency: "daily"
+    unit: "percent"
+    description: "Overnight reverse repo rate - corridor floor"
+    transform: { type: "identity" }
+
+  - key: dfedtaru
+    series_id: "DFEDTARU"
+    label: "Fed Funds Target Range - Upper"
+    frequency: "daily_7day"
+    unit: "percent"
+    description: "FOMC target range upper bound"
+    transform: { type: "identity" }
+
+  - key: dfedtarl
+    series_id: "DFEDTARL"
+    label: "Fed Funds Target Range - Lower"
+    frequency: "daily_7day"
+    unit: "percent"
+    description: "FOMC target range lower bound"
+    transform: { type: "identity" }
+
+  - key: sofr
+    series_id: "SOFR"
+    label: "Secured Overnight Financing Rate"
+    frequency: "daily"
+    unit: "percent"
+    description: "Repo rate benchmark - reflects true secured funding cost"
+    transform: { type: "identity" }
+
+  - key: dpcredit
+    series_id: "DPCREDIT"
+    label: "Discount Window Primary Credit Rate"
+    frequency: "daily"
+    unit: "percent"
+    description: "Penalty rate for bank borrowing - corridor ceiling"
+    transform: { type: "identity" }
+
+  - key: srf_rate
+    series_id: "SRFTSYD"
+    label: "Standing Repo Facility Rate"
+    frequency: "daily"
+    unit: "percent"
+    description: "SRF offering rate for primary dealers"
+    transform: { type: "identity" }
+
+  # --------------------------------------------------------------------------
+  # LIQUIDITY POOLS - Balance Sheet Components
+  # --------------------------------------------------------------------------
+  - key: rrp_usage_bil
+    series_id: "RRPONTSYD"
+    label: "ON RRP Usage"
+    frequency: "daily"
+    unit: "usd_billions"
+    description: "Daily ON RRP take-up - measures excess liquidity parking"
+    transform: { type: "identity" }
+
+  - key: reserves_mil
+    series_id: "WRESBAL"
+    label: "Reserve Balances with FRBs"
+    frequency: "weekly_ending_wed"
+    unit: "usd_millions"
+    align: "ffill_to_daily"
+    description: "Bank reserves at Fed - key liquidity metric"
+    transform: { type: "identity" }
+
+  - key: tga_mil
+    series_id: "WDTGAL"
+    label: "Treasury General Account"
+    frequency: "weekly_asof_wed"
+    unit: "usd_millions"
+    align: "ffill_to_daily"
+    description: "Treasury cash balance - drains/adds liquidity when moves"
+    transform: { type: "identity" }
+
+  - key: walcl_mil
+    series_id: "WALCL"
+    label: "Fed Total Assets"
+    frequency: "weekly_asof_wed"
+    unit: "usd_millions"
+    align: "ffill_to_daily"
+    description: "Total Fed balance sheet - tracks QE/QT progress"
+    transform: { type: "identity" }
+
+  - key: rrp_h41_mil
+    series_id: "WLRRAL"
+    label: "Reverse Repo (H.4.1)"
+    frequency: "weekly_asof_wed"
+    unit: "usd_millions"
+    align: "ffill_to_daily"
+    description: "Weekly RRP snapshot from H.4.1 release"
+    transform: { type: "identity" }
+
+  # --------------------------------------------------------------------------
+  # STRESS INDICATORS - Backstop Facility Usage
+  # --------------------------------------------------------------------------
+  - key: dw_primary_mil
+    series_id: "WLCFLPCL"
+    label: "Discount Window Primary Credit"
+    frequency: "weekly_asof_wed"
+    unit: "usd_millions"
+    align: "ffill_to_daily"
+    description: "Banks borrowing from discount window - stress signal"
+    transform: { type: "identity" }
+
+  - key: srf_usage_mil
+    series_id: "WLRFSTRL"
+    label: "Standing Repo Facility Usage"
+    frequency: "weekly_asof_wed"
+    unit: "usd_millions"
+    align: "ffill_to_daily"
+    description: "SRF take-up by dealers - repo market stress signal"
+    transform: { type: "identity" }
+
+  - key: swaps_mil
+    series_id: "SWPT"
+    label: "Central Bank Liquidity Swaps"
+    frequency: "weekly_asof_wed"
+    unit: "usd_millions"
+    align: "ffill_to_daily"
+    description: "USD swap lines to foreign CBs - global dollar stress"
+    transform: { type: "identity" }
+
+  - key: fima_repo_mil
+    series_id: "H41RESPPALGFOFNWW"
+    label: "FIMA Repo Pool"
+    frequency: "weekly_asof_wed"
+    unit: "usd_millions"
+    align: "ffill_to_daily"
+    description: "Foreign central bank repo facility usage"
+    transform: { type: "identity" }
+
+  - key: foreign_official_repo_mil
+    series_id: "H41RESPPALGTRFNWW"
+    label: "Foreign Official Repo (Treasury)"
+    frequency: "weekly_asof_wed"
+    unit: "usd_millions"
+    align: "ffill_to_daily"
+    description: "Foreign official repo against Treasuries"
+    transform: { type: "identity" }
+
+  # --------------------------------------------------------------------------
+  # SUPPLEMENTARY - Market Rates & Spreads
+  # --------------------------------------------------------------------------
+  - key: obfr
+    series_id: "OBFR"
+    label: "Overnight Bank Funding Rate"
+    frequency: "daily"
+    unit: "percent"
+    description: "Includes eurodollar transactions - broader than EFFR"
+    transform: { type: "identity" }
+
+  - key: tgcr
+    series_id: "TGCR"
+    label: "Tri-Party General Collateral Rate"
+    frequency: "daily"
+    unit: "percent"
+    description: "Tri-party repo rate for Treasury collateral"
+    transform: { type: "identity" }
+
+  - key: bgcr
+    series_id: "BGCR"
+    label: "Broad General Collateral Rate"
+    frequency: "daily"
+    unit: "percent"
+    description: "Broader repo rate including DVP"
+    transform: { type: "identity" }
+
+# ============================================================================
+# DERIVED METRICS
+# ============================================================================
+derived:
+  # --------------------------------------------------------------------------
+  # Unit Conversions
+  # --------------------------------------------------------------------------
+  - key: rrp_usage_mil
+    label: "ON RRP Usage (Millions)"
+    unit: "usd_millions"
+    expr: "rrp_usage_bil * 1000.0"
+    description: "Convert to millions for consistent math with H.4.1 data"
+
+  # --------------------------------------------------------------------------
+  # Rate Corridor Spreads
+  # --------------------------------------------------------------------------
+  - key: spread_iorb_rrp
+    label: "IORB - RRP Spread"
+    unit: "bps"
+    expr: "(iorb - rrp_award) * 100"
+    description: "Width between floor and anchor - currently 5bp"
+
+  - key: spread_effr_iorb
+    label: "EFFR - IORB Spread"
+    unit: "bps"
+    expr: "(effr - iorb) * 100"
+    description: "Should be ~0 or slightly negative; positive = tightness"
+
+  - key: spread_sofr_effr
+    label: "SOFR - EFFR Spread"
+    unit: "bps"
+    expr: "(sofr - effr) * 100"
+    description: "Repo vs unsecured spread; wide = collateral scarcity"
+
+  - key: spread_sofr_rrp
+    label: "SOFR - RRP Spread"
+    unit: "bps"
+    expr: "(sofr - rrp_award) * 100"
+    description: "Distance from floor - measures rate corridor position"
+
+  - key: spread_dpcredit_effr
+    label: "Primary Credit - EFFR Spread"
+    unit: "bps"
+    expr: "(dpcredit - effr) * 100"
+    description: "Penalty spread for discount window borrowing"
+
+  - key: effr_vs_target_mid
+    label: "EFFR vs Target Midpoint"
+    unit: "bps"
+    expr: "(effr - (dfedtaru + dfedtarl) / 2) * 100"
+    description: "How far EFFR is from FOMC target center"
+
+  # --------------------------------------------------------------------------
+  # Liquidity Structure Ratios
+  # --------------------------------------------------------------------------
+  - key: ratio_rrp_to_reserves
+    label: "RRP / Reserves Ratio"
+    unit: "ratio"
+    expr: "rrp_usage_mil / reserves_mil"
+    description: "High ratio = excess cash; declining = liquidity normalizing"
+
+  - key: ratio_tga_to_reserves
+    label: "TGA / Reserves Ratio"
+    unit: "ratio"
+    expr: "tga_mil / reserves_mil"
+    description: "Treasury cash relative to bank reserves"
+
+  - key: reserves_plus_rrp_mil
+    label: "Reserves + RRP (Total Liquidity)"
+    unit: "usd_millions"
+    expr: "reserves_mil + rrp_usage_mil"
+    description: "Total system liquidity in Fed liabilities"
+
+  # --------------------------------------------------------------------------
+  # Net Liquidity Proxy (Trading Signal)
+  # --------------------------------------------------------------------------
+  - key: net_liquidity_mil
+    label: "Net Liquidity Proxy"
+    unit: "usd_millions"
+    expr: "walcl_mil - tga_mil - rrp_usage_mil"
+    description: "WALCL - TGA - RRP: common risk-asset correlation proxy"
+
+  - key: net_liquidity_bil
+    label: "Net Liquidity (Billions)"
+    unit: "usd_billions"
+    expr: "(walcl_mil - tga_mil - rrp_usage_mil) / 1000.0"
+    description: "Same metric in billions for readability"
+
+  # --------------------------------------------------------------------------
+  # QT Progress Tracking
+  # --------------------------------------------------------------------------
+  - key: walcl_from_peak_mil
+    label: "WALCL Change from Peak"
+    unit: "usd_millions"
+    expr: "walcl_mil - 8965486"  # Peak was ~$8.965T in April 2022
+    description: "How much Fed has shrunk balance sheet from QE peak"
+
+# ============================================================================
+# METRICS CALCULATION
+# ============================================================================
+metrics:
+  # Period-over-period changes
+  changes:
+    - name: "d1"
+      type: "diff"
+      periods: 1
+      description: "1-day change"
+    - name: "d5"
+      type: "diff"
+      periods: 5
+      description: "5-day (weekly) change"
+    - name: "d20"
+      type: "diff"
+      periods: 20
+      description: "20-day (monthly) change"
+    - name: "pct1"
+      type: "pct_change"
+      periods: 1
+      description: "1-day percent change"
+    - name: "pct5"
+      type: "pct_change"
+      periods: 5
+      description: "5-day percent change"
+
+  # Rolling statistics
+  rolling:
+    - name: "ma5"
+      type: "rolling_mean"
+      window: 5
+      description: "5-day moving average"
+    - name: "ma20"
+      type: "rolling_mean"
+      window: 20
+      description: "20-day moving average"
+    - name: "std20"
+      type: "rolling_std"
+      window: 20
+      description: "20-day rolling standard deviation"
+    - name: "zscore20"
+      type: "zscore"
+      window: 20
+      description: "Z-score vs 20-day mean/std"
+
+# ============================================================================
+# ALERT RULES
+# ============================================================================
+alerts:
+  # --------------------------------------------------------------------------
+  # Rate Corridor Alerts
+  # --------------------------------------------------------------------------
+  - key: effr_vs_target_mid
+    rule: "abs(value) > 5"
+    severity: "warning"
+    note: "EFFR偏离目标中点超过5bp"
+    category: "rates"
+
+  - key: spread_sofr_effr
+    rule: "abs(value) > 10"
+    severity: "warning"
+    note: "SOFR-EFFR利差超过10bp（repo市场压力信号）"
+    category: "rates"
+
+  - key: spread_sofr_effr
+    rule: "abs(value) > 25"
+    severity: "critical"
+    note: "SOFR-EFFR利差超过25bp（严重repo压力）"
+    category: "rates"
+
+  - key: spread_effr_iorb
+    rule: "value > 3"
+    severity: "warning"
+    note: "EFFR高于IORB超过3bp（资金偏紧）"
+    category: "rates"
+
+  # --------------------------------------------------------------------------
+  # Liquidity Pool Alerts
+  # --------------------------------------------------------------------------
+  - key: rrp_usage_bil
+    rule: "d1 < -100"
+    severity: "info"
+    note: "RRP单日流出超$100B（潜在risk-on信号）"
+    category: "liquidity"
+
+  - key: rrp_usage_bil
+    rule: "d5 < -200"
+    severity: "warning"
+    note: "RRP周流出超$200B（流动性快速收缩）"
+    category: "liquidity"
+
+  - key: rrp_usage_bil
+    rule: "value < 100"
+    severity: "critical"
+    note: "RRP余额低于$100B（接近耗尽，准备金可能变稀缺）"
+    category: "liquidity"
+
+  - key: reserves_mil
+    rule: "value < 3000000"
+    severity: "critical"
+    note: "准备金低于$3T（接近稀缺区间）"
+    category: "liquidity"
+
+  - key: reserves_mil
+    rule: "value < 3200000"
+    severity: "warning"
+    note: "准备金低于$3.2T（进入关注区间）"
+    category: "liquidity"
+
+  - key: net_liquidity_mil
+    rule: "d5 < -200000"
+    severity: "warning"
+    note: "Net Liquidity 5日下降超$200B"
+    category: "liquidity"
+
+  - key: net_liquidity_mil
+    rule: "d20 < -500000"
+    severity: "critical"
+    note: "Net Liquidity 月度下降超$500B（重大流动性收缩）"
+    category: "liquidity"
+
+  - key: tga_mil
+    rule: "d5 > 100000"
+    severity: "info"
+    note: "TGA周增加超$100B（财政部抽水，可能压制风险资产）"
+    category: "liquidity"
+
+  - key: tga_mil
+    rule: "value < 100000"
+    severity: "warning"
+    note: "TGA低于$100B（接近债务上限耗尽）"
+    category: "liquidity"
+
+  # --------------------------------------------------------------------------
+  # Stress Signal Alerts
+  # --------------------------------------------------------------------------
+  - key: dw_primary_mil
+    rule: "value > 5000"
+    severity: "warning"
+    note: "贴现窗口使用超$5B（银行流动性压力）"
+    category: "stress"
+
+  - key: dw_primary_mil
+    rule: "value > 20000"
+    severity: "critical"
+    note: "贴现窗口使用超$20B（类似SVB危机水平）"
+    category: "stress"
+
+  - key: dw_primary_mil
+    rule: "d1 > 5000"
+    severity: "critical"
+    note: "贴现窗口单周飙升超$5B（突发流动性危机信号）"
+    category: "stress"
+
+  - key: srf_usage_mil
+    rule: "value > 1000"
+    severity: "warning"
+    note: "SRF使用超$1B（repo市场压力）"
+    category: "stress"
+
+  - key: srf_usage_mil
+    rule: "value > 10000"
+    severity: "critical"
+    note: "SRF使用超$10B（严重repo市场失灵）"
+    category: "stress"
+
+  - key: swaps_mil
+    rule: "d1 > 5000"
+    severity: "warning"
+    note: "央行互换周增加超$5B（全球美元紧张）"
+    category: "stress"
+
+  - key: swaps_mil
+    rule: "value > 50000"
+    severity: "critical"
+    note: "央行互换超$50B（全球美元危机水平）"
+    category: "stress"
+
+  # --------------------------------------------------------------------------
+  # QT Progress Alerts
+  # --------------------------------------------------------------------------
+  - key: walcl_mil
+    rule: "d5 > 50000"
+    severity: "info"
+    note: "Fed资产周增加超$500亿（QT暂停或干预信号）"
+    category: "balance_sheet"
+
+  - key: walcl_mil
+    rule: "d5 < -30000"
+    severity: "info"
+    note: "Fed资产周减少超$300亿（QT加速）"
+    category: "balance_sheet"
+
+# ============================================================================
+# DASHBOARD PANEL CONFIGURATION
+# ============================================================================
+panel:
+  refresh_interval_seconds: 300  # 5 minutes
+
+  charts:
+    - title: "Interest Rate Corridor"
+      series: ["dfedtarl", "rrp_award", "effr", "iorb", "sofr", "dfedtaru", "dpcredit"]
+      chart_type: "line"
+      y_axis_label: "Rate (%)"
+      height: 400
+
+    - title: "Rate Spreads (bps)"
+      series: ["spread_effr_iorb", "spread_sofr_effr", "effr_vs_target_mid"]
+      chart_type: "line"
+      y_axis_label: "Spread (bps)"
+      reference_line: 0
+      height: 300
+
+    - title: "ON RRP Usage"
+      series: ["rrp_usage_bil"]
+      chart_type: "area"
+      y_axis_label: "USD Billions"
+      height: 300
+
+    - title: "Reserves & TGA"
+      series: ["reserves_mil", "tga_mil"]
+      chart_type: "line"
+      y_axis_label: "USD Millions"
+      height: 350
+
+    - title: "Fed Balance Sheet (WALCL)"
+      series: ["walcl_mil"]
+      chart_type: "area"
+      y_axis_label: "USD Millions"
+      height: 300
+
+    - title: "Net Liquidity Proxy"
+      series: ["net_liquidity_bil"]
+      chart_type: "line"
+      y_axis_label: "USD Billions"
+      height: 350
+
+    - title: "Stress Indicators"
+      series: ["dw_primary_mil", "srf_usage_mil", "swaps_mil"]
+      chart_type: "bar"
+      y_axis_label: "USD Millions"
+      height: 350
+
+    - title: "Liquidity Structure"
+      series: ["ratio_rrp_to_reserves"]
+      chart_type: "line"
+      y_axis_label: "Ratio"
+      height: 300
+
+  tables:
+    - title: "Current Values"
+      series: ["effr", "iorb", "rrp_award", "sofr", "rrp_usage_bil", "reserves_mil", "tga_mil", "net_liquidity_bil"]
+      show_columns: ["value", "d1", "d5", "d20"]
+
+    - title: "Stress Dashboard"
+      series: ["dw_primary_mil", "srf_usage_mil", "swaps_mil", "fima_repo_mil"]
+      show_columns: ["value", "d1", "ma20"]
+
+# ============================================================================
+# SCHEDULER
+# ============================================================================
+schedule:
+  # Daily data fetch (after NY close, Tokyo morning)
+  fetch_daily:
+    cron: "0 7 * * 1-5"
+    timezone: "Asia/Tokyo"
+    description: "Fetch daily FRED data on weekday mornings"
+
+  # Weekly data fetch (Thursday after H.4.1 release)
+  fetch_weekly:
+    cron: "0 8 * * 4"
+    timezone: "Asia/Tokyo"
+    description: "Fetch weekly H.4.1 data on Thursday mornings"
+
+  # Alert checking
+  check_alerts:
+    cron: "*/30 7-23 * * 1-5"
+    timezone: "Asia/Tokyo"
+    description: "Check alerts every 30 min during trading hours"
+
+  # Daily summary report
+  daily_summary:
+    cron: "0 22 * * 1-5"
+    timezone: "Asia/Tokyo"
+    description: "Send daily summary at 10pm Tokyo"
+
+# ============================================================================
+# DATABASE
+# ============================================================================
+database:
+  type: "sqlite"
+  path: "fed_monitor.db"
+  # Alternative: PostgreSQL for production
+  # type: "postgresql"
+  # connection_env: "DATABASE_URL"
+
+  tables:
+    observations:
+      description: "Raw FRED observations"
+      retention_days: 3650  # 10 years
+
+    derived_metrics:
+      description: "Calculated derived values"
+      retention_days: 3650
+
+    alerts_log:
+      description: "Historical alert triggers"
+      retention_days: 365
+
+    fetch_log:
+      description: "Data fetch history for debugging"
+      retention_days: 30

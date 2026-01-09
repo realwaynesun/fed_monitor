@@ -43,7 +43,8 @@ def load_base_data(
 
     # Resample to daily and forward-fill for consistent panel
     if ffill:
-        df = df.resample("D").ffill()
+        # asfreq creates daily index with NaN for missing days, then ffill propagates values
+        df = df.asfreq("D").ffill()
 
     return df
 

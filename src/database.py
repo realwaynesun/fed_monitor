@@ -1,6 +1,6 @@
 """
 Database module for Fed Monitor.
-SQLite storage for observations, derived metrics, and alert logs.
+SQLite/Turso storage for observations, derived metrics, and alert logs.
 """
 
 import sqlite3
@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from .config import get_config
+from .config import get_config, get_secret
 
 
 def get_db_path() -> Path:
@@ -19,11 +19,28 @@ def get_db_path() -> Path:
     return Path(__file__).parent.parent / config.database_path
 
 
+def _use_turso() -> bool:
+    """Check if Turso cloud database is configured."""
+    return bool(get_secret("TURSO_DATABASE_URL"))
+
+
+def _get_turso_connection():
+    """Get a Turso/libsql connection."""
+    import libsql_experimental as libsql
+    url = get_secret("TURSO_DATABASE_URL")
+    token = get_secret("TURSO_AUTH_TOKEN")
+    return libsql.connect(url, auth_token=token)
+
+
 def init_db() -> None:
     """Initialize database schema."""
-    db_path = get_db_path()
+    if _use_turso():
+        conn = _get_turso_connection()
+    else:
+        db_path = get_db_path()
+        conn = sqlite3.connect(db_path)
 
-    with sqlite3.connect(db_path) as conn:
+    try:
         cursor = conn.cursor()
 
         # Raw FRED observations
@@ -92,13 +109,18 @@ def init_db() -> None:
         """)
 
         conn.commit()
+    finally:
+        conn.close()
 
 
 @contextmanager
 def get_connection():
     """Context manager for database connections."""
-    conn = sqlite3.connect(get_db_path())
-    conn.row_factory = sqlite3.Row
+    if _use_turso():
+        conn = _get_turso_connection()
+    else:
+        conn = sqlite3.connect(get_db_path())
+        conn.row_factory = sqlite3.Row
     try:
         yield conn
     finally:

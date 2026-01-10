@@ -205,7 +205,11 @@
             .alert-box h3 { font-size: 0.75rem; margin-bottom: 5px; }
             .alert-count { font-size: 1.3rem; margin-bottom: 5px; }
             .alert-item { font-size: 0.75rem; padding: 6px 0; }
-            .chart-container { padding: 8px; margin-bottom: 12px; border-radius: 6px; }
+            .chart-container {
+                padding: 10px;
+                margin-bottom: 25px;  /* More spacing between charts */
+                border-radius: 6px;
+            }
             .section-title { font-size: 1rem; margin: 25px 0 12px; }
             .table-container {
                 padding: 8px;
@@ -330,20 +334,12 @@
 
             const configs = {
                 phone: {
-                    height: Math.min(baseHeight, 220),
-                    margin: { t: 35, r: 8, b: 70, l: 35 },
+                    height: Math.min(baseHeight, 280),  // Taller charts
+                    margin: { t: 35, r: 10, b: 30, l: 45 },  // Less bottom margin, more left for y-axis
                     font: { size: 9 },
                     xaxis: { nticks: 4, tickfont: { size: 8 } },
                     yaxis: { tickfont: { size: 8 }, title: '' },
-                    legend: {
-                        orientation: 'h',
-                        yanchor: 'top',
-                        y: -0.25,
-                        xanchor: 'center',
-                        x: 0.5,
-                        font: { size: 7 },
-                        bgcolor: 'rgba(0,0,0,0)'
-                    },
+                    legend: { visible: false },  // Hide legend on phone - use hover instead
                     titleFont: { size: 11 }
                 },
                 tablet: {
@@ -533,9 +529,15 @@
                     ...LAYOUT_BASE.yaxis,
                     title: screenType === 'phone' ? '' : chartData.y_label,
                     tickfont: responsive.yaxis.tickfont
-                },
-                legend: responsive.legend
+                }
             };
+
+            // Handle legend visibility
+            if (responsive.legend.visible === false) {
+                layout.showlegend = false;
+            } else {
+                layout.legend = responsive.legend;
+            }
 
             // Add reference line if specified
             if (chartData.reference_line !== null) {
@@ -611,6 +613,9 @@
                 const generated = new Date(data.generated_at).toLocaleString();
                 meta.textContent = `Data: ${data.date_range.start} to ${data.date_range.end} · Generated: ${generated} · Config v${data.config_version}`;
 
+                // Cache chart data for resize re-rendering
+                cachedChartData = data.charts;
+
                 // Render sections
                 renderAlerts(data.alerts);
                 renderCharts(data.charts);
@@ -622,6 +627,20 @@
                     `<div class="loading">Error loading data: ${error.message}</div>`;
             }
         }
+
+        // Store chart data for re-rendering
+        let cachedChartData = null;
+
+        // Re-render charts on resize (debounced)
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (cachedChartData) {
+                    renderCharts(cachedChartData);
+                }
+            }, 250);
+        });
 
         // Initialize
         loadDashboard();

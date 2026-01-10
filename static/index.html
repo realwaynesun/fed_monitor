@@ -179,10 +179,44 @@
             color: var(--text-secondary);
         }
 
+        /* Tablet styles */
         @media (max-width: 768px) {
-            .container { padding: 10px; }
+            .container { padding: 12px; }
             header h1 { font-size: 1.4rem; }
-            .alerts-panel { grid-template-columns: 1fr; }
+            header .meta { font-size: 0.8rem; }
+            .alerts-panel { grid-template-columns: 1fr; gap: 10px; }
+            .alert-box { padding: 12px; }
+            .alert-count { font-size: 1.5rem; }
+            .chart-container { padding: 10px; margin-bottom: 15px; }
+            .section-title { font-size: 1.1rem; margin: 30px 0 15px; }
+            .table-container { padding: 10px; }
+            table { font-size: 0.8rem; }
+            th, td { padding: 8px 6px; }
+        }
+
+        /* Phone styles */
+        @media (max-width: 480px) {
+            .container { padding: 8px; }
+            header { padding: 15px 0; margin-bottom: 20px; }
+            header h1 { font-size: 1.2rem; }
+            header .meta { font-size: 0.75rem; line-height: 1.4; }
+            .alerts-panel { gap: 8px; margin-bottom: 20px; }
+            .alert-box { padding: 10px; }
+            .alert-box h3 { font-size: 0.75rem; margin-bottom: 5px; }
+            .alert-count { font-size: 1.3rem; margin-bottom: 5px; }
+            .alert-item { font-size: 0.75rem; padding: 6px 0; }
+            .chart-container { padding: 8px; margin-bottom: 12px; border-radius: 6px; }
+            .section-title { font-size: 1rem; margin: 25px 0 12px; }
+            .table-container {
+                padding: 8px;
+                border-radius: 6px;
+                -webkit-overflow-scrolling: touch;
+            }
+            .table-container h3 { font-size: 0.9rem; margin-bottom: 10px; }
+            table { font-size: 0.75rem; }
+            th, td { padding: 6px 4px; white-space: nowrap; }
+            th { font-size: 0.7rem; }
+            footer { margin-top: 30px; padding: 15px 0; font-size: 0.75rem; }
         }
     </style>
 </head>
@@ -282,7 +316,76 @@
             'default': { dash: 'solid', width: 2 }
         };
 
-        // Plotly dark theme layout
+        // Responsive breakpoints
+        function getScreenType() {
+            const width = window.innerWidth;
+            if (width <= 480) return 'phone';
+            if (width <= 768) return 'tablet';
+            return 'desktop';
+        }
+
+        // Get responsive layout settings
+        function getResponsiveLayout(baseHeight) {
+            const screenType = getScreenType();
+
+            const configs = {
+                phone: {
+                    height: Math.min(baseHeight, 220),
+                    margin: { t: 35, r: 8, b: 70, l: 35 },
+                    font: { size: 9 },
+                    xaxis: { nticks: 4, tickfont: { size: 8 } },
+                    yaxis: { tickfont: { size: 8 }, title: '' },
+                    legend: {
+                        orientation: 'h',
+                        yanchor: 'top',
+                        y: -0.25,
+                        xanchor: 'center',
+                        x: 0.5,
+                        font: { size: 7 },
+                        bgcolor: 'rgba(0,0,0,0)'
+                    },
+                    titleFont: { size: 11 }
+                },
+                tablet: {
+                    height: Math.min(baseHeight, 280),
+                    margin: { t: 40, r: 15, b: 75, l: 50 },
+                    font: { size: 10 },
+                    xaxis: { nticks: 6, tickfont: { size: 9 } },
+                    yaxis: { tickfont: { size: 9 } },
+                    legend: {
+                        orientation: 'h',
+                        yanchor: 'top',
+                        y: -0.18,
+                        xanchor: 'center',
+                        x: 0.5,
+                        font: { size: 8 },
+                        bgcolor: 'rgba(0,0,0,0)'
+                    },
+                    titleFont: { size: 12 }
+                },
+                desktop: {
+                    height: baseHeight,
+                    margin: { t: 50, r: 20, b: 80, l: 60 },
+                    font: { size: 11 },
+                    xaxis: { nticks: 10, tickfont: { size: 10 } },
+                    yaxis: { tickfont: { size: 10 } },
+                    legend: {
+                        orientation: 'h',
+                        yanchor: 'top',
+                        y: -0.15,
+                        xanchor: 'center',
+                        x: 0.5,
+                        font: { size: 10 },
+                        bgcolor: 'rgba(0,0,0,0)'
+                    },
+                    titleFont: { size: 14 }
+                }
+            };
+
+            return configs[screenType];
+        }
+
+        // Plotly dark theme layout (base)
         const LAYOUT_BASE = {
             paper_bgcolor: 'rgba(0,0,0,0)',
             plot_bgcolor: 'rgba(0,0,0,0)',
@@ -290,7 +393,7 @@
             xaxis: {
                 gridcolor: '#333',
                 linecolor: '#333',
-                tickformat: '%b %Y'
+                tickformat: '%b %y'
             },
             yaxis: {
                 gridcolor: '#333',
@@ -300,7 +403,7 @@
             hoverlabel: {
                 bgcolor: '#1a1d24',
                 bordercolor: '#333',
-                font: { color: '#fafafa', size: 11 }
+                font: { color: '#fafafa', size: 10 }
             },
             legend: {
                 orientation: 'h',
@@ -376,12 +479,21 @@
             div.id = `chart-${index}`;
             container.appendChild(div);
 
+            // Get responsive settings
+            const responsive = getResponsiveLayout(chartData.height || 400);
+            const screenType = getScreenType();
+
             const traces = chartData.series.map((s, i) => {
                 // Use short label if available
                 const shortLabel = SHORT_LABELS[s.label] || s.label;
 
                 // Get line style for visual hierarchy
                 const lineStyle = LINE_STYLES[shortLabel] || LINE_STYLES['default'];
+
+                // Adjust line width for mobile
+                const lineWidth = screenType === 'phone'
+                    ? Math.max(1, lineStyle.width - 0.5)
+                    : lineStyle.width;
 
                 const trace = {
                     x: s.dates,
@@ -391,7 +503,7 @@
                     mode: 'lines',  // No markers - cleaner look
                     line: {
                         color: COLORS[i % COLORS.length],
-                        width: lineStyle.width,
+                        width: lineWidth,
                         dash: lineStyle.dash
                     },
                     hovertemplate: `${shortLabel}: %{y:.4f}<extra></extra>`
@@ -405,11 +517,24 @@
                 return trace;
             });
 
+            // Build responsive layout
             const layout = {
                 ...LAYOUT_BASE,
-                title: { text: chartData.title, font: { size: 14 } },
-                height: chartData.height || 400,
-                yaxis: { ...LAYOUT_BASE.yaxis, title: chartData.y_label }
+                title: { text: chartData.title, font: { size: responsive.titleFont.size } },
+                height: responsive.height,
+                margin: responsive.margin,
+                font: { ...LAYOUT_BASE.font, size: responsive.font.size },
+                xaxis: {
+                    ...LAYOUT_BASE.xaxis,
+                    nticks: responsive.xaxis.nticks,
+                    tickfont: responsive.xaxis.tickfont
+                },
+                yaxis: {
+                    ...LAYOUT_BASE.yaxis,
+                    title: screenType === 'phone' ? '' : chartData.y_label,
+                    tickfont: responsive.yaxis.tickfont
+                },
+                legend: responsive.legend
             };
 
             // Add reference line if specified

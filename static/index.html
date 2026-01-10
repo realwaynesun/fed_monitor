@@ -206,17 +206,87 @@
     </div>
 
     <script>
-        // Color palette
+        // Color palette - distinct colors for readability
         const COLORS = [
             '#00D4FF', '#FF6B6B', '#4ECDC4', '#FFE66D',
             '#95E1D3', '#F38181', '#AA96DA', '#FCBAD3'
         ];
 
+        // Short labels for cleaner legends
+        const SHORT_LABELS = {
+            'Fed Funds Target Range - Lower': 'Target Lower',
+            'Fed Funds Target Range - Upper': 'Target Upper',
+            'Effective Federal Funds Rate': 'EFFR',
+            'Interest Rate on Reserve Balances': 'IORB',
+            'ON RRP Offering Rate': 'RRP Offer',
+            'Discount Window Primary Credit Rate': 'Discount Window',
+            'Standing Repo Facility Rate': 'SRF Rate',
+            'Secured Overnight Financing Rate': 'SOFR',
+            'Tri-Party General Collateral Rate': 'TGCR',
+            'Overnight Bank Funding Rate': 'OBFR',
+            'Reserve Balances with FRBs': 'Reserves',
+            'Treasury General Account': 'TGA',
+            'Currency in Circulation (H.4.1 Week Avg)': 'Currency',
+            'Fed Total Assets': 'Fed Assets',
+            'SOMA Securities Held Outright (Total)': 'SOMA Total',
+            'SOMA U.S. Treasury Securities': 'SOMA Treasuries',
+            'SOMA U.S. Treasury Bills': 'SOMA Bills',
+            'SOMA UST Notes & Bonds (Nominal)': 'SOMA Coupons',
+            'SOMA Mortgage-Backed Securities': 'SOMA MBS',
+            'Discount Window Primary Credit Outstanding': 'Discount Window',
+            'Central Bank Liquidity Swaps': 'CB Swaps',
+            'Foreign Official Repo (Treasury)': 'Foreign Repo',
+            'Chicago Fed National Financial Conditions Index': 'NFCI',
+            'St. Louis Fed Financial Stress Index': 'STLFSI',
+            'Kansas City Fed Financial Stress Index': 'KCFSI',
+            'US High Yield OAS': 'HY OAS',
+            'US Investment Grade OAS': 'IG OAS',
+            'CBOE Volatility Index (VIX)': 'VIX',
+            '3-Month Treasury Yield': '3M Yield',
+            '2-Year Treasury Yield': '2Y Yield',
+            '10-Year Treasury Yield': '10Y Yield',
+            '10Y-3M Treasury Curve (bps)': '10Y-3M Curve',
+            'ON RRP Usage': 'RRP Usage',
+            'Overnight Repos (Treasury) - Amount': 'Repo Ops',
+            'EFFR - IORB Spread': 'EFFR-IORB',
+            'SOFR - EFFR Spread': 'SOFR-EFFR',
+            'SOFR - ON RRP Offering Spread': 'SOFR-RRP',
+            'EFFR vs Target Midpoint': 'EFFR vs Mid',
+            'Money-Market Tightness Index (vs IORB)': 'MM Tightness',
+            'EFFR Tail Range (99-1)': 'EFFR Tail',
+            'OBFR Tail Range (99-1)': 'OBFR Tail',
+            'SOFR Tail Range (99-1)': 'SOFR Tail',
+            'TGCR Tail Range (99-1)': 'TGCR Tail',
+            'EFFR Underlying Volume': 'EFFR Vol',
+            'OBFR Underlying Volume': 'OBFR Vol',
+            'SOFR Underlying Volume': 'SOFR Vol',
+            'TGCR Underlying Volume': 'TGCR Vol',
+            'Reserves as % of Bank Assets': 'Reserves/Assets',
+            'RRP Share of (Reserves + RRP)': 'RRP Share',
+            'RRP / Reserves Ratio': 'RRP/Reserves',
+            'Net Liquidity (Billions)': 'Net Liquidity',
+            'Market Net Liquidity Proxy': 'Market Liquidity'
+        };
+
+        // Line styles for visual hierarchy
+        const LINE_STYLES = {
+            // Dashed for target bounds (reference lines)
+            'Target Lower': { dash: 'dash', width: 1.5 },
+            'Target Upper': { dash: 'dash', width: 1.5 },
+            'Discount Window': { dash: 'dot', width: 1.5 },
+            // Thicker for key rates
+            'EFFR': { dash: 'solid', width: 3 },
+            'IORB': { dash: 'solid', width: 2.5 },
+            'SOFR': { dash: 'solid', width: 2.5 },
+            // Default
+            'default': { dash: 'solid', width: 2 }
+        };
+
         // Plotly dark theme layout
         const LAYOUT_BASE = {
             paper_bgcolor: 'rgba(0,0,0,0)',
             plot_bgcolor: 'rgba(0,0,0,0)',
-            font: { color: '#fafafa', family: '-apple-system, sans-serif' },
+            font: { color: '#fafafa', family: '-apple-system, sans-serif', size: 11 },
             xaxis: {
                 gridcolor: '#333',
                 linecolor: '#333',
@@ -227,14 +297,21 @@
                 linecolor: '#333'
             },
             hovermode: 'x unified',
+            hoverlabel: {
+                bgcolor: '#1a1d24',
+                bordercolor: '#333',
+                font: { color: '#fafafa', size: 11 }
+            },
             legend: {
                 orientation: 'h',
-                yanchor: 'bottom',
-                y: 1.02,
-                xanchor: 'right',
-                x: 1
+                yanchor: 'top',
+                y: -0.15,
+                xanchor: 'center',
+                x: 0.5,
+                bgcolor: 'rgba(0,0,0,0)',
+                font: { size: 10 }
             },
-            margin: { t: 40, r: 20, b: 50, l: 60 }
+            margin: { t: 50, r: 20, b: 80, l: 60 }
         };
 
         // Format numbers for display
@@ -300,14 +377,24 @@
             container.appendChild(div);
 
             const traces = chartData.series.map((s, i) => {
+                // Use short label if available
+                const shortLabel = SHORT_LABELS[s.label] || s.label;
+
+                // Get line style for visual hierarchy
+                const lineStyle = LINE_STYLES[shortLabel] || LINE_STYLES['default'];
+
                 const trace = {
                     x: s.dates,
                     y: s.values,
-                    name: s.label,
+                    name: shortLabel,
                     type: 'scatter',
-                    mode: 'lines+markers',
-                    line: { color: COLORS[i % COLORS.length], width: 2 },
-                    marker: { size: 3 }
+                    mode: 'lines',  // No markers - cleaner look
+                    line: {
+                        color: COLORS[i % COLORS.length],
+                        width: lineStyle.width,
+                        dash: lineStyle.dash
+                    },
+                    hovertemplate: `${shortLabel}: %{y:.4f}<extra></extra>`
                 };
 
                 if (chartData.type === 'area') {
@@ -331,7 +418,7 @@
                     type: 'line',
                     x0: 0, x1: 1, xref: 'paper',
                     y0: chartData.reference_line, y1: chartData.reference_line,
-                    line: { color: 'gray', width: 1, dash: 'dash' }
+                    line: { color: '#666', width: 1, dash: 'dash' }
                 }];
             }
 

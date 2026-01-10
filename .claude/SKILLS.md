@@ -135,6 +135,52 @@ gh run rerun <id>               # Re-run failed
 
 ---
 
+## /review-ui - Professional UI Review
+
+Automated dashboard review from economist/trader perspective using Playwright.
+
+**Prerequisites:**
+```bash
+source venv/bin/activate
+pip install playwright
+playwright install chromium
+```
+
+**Capture screenshots:**
+```python
+# /tmp/capture_dashboard.py
+from playwright.sync_api import sync_playwright
+
+VIEWPORTS = [
+    {"name": "desktop", "width": 1920, "height": 1080},
+    {"name": "tablet", "width": 768, "height": 1024},
+    {"name": "phone", "width": 375, "height": 812},
+]
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    for vp in VIEWPORTS:
+        page = browser.new_page(viewport={"width": vp["width"], "height": vp["height"]})
+        page.goto("https://realwaynesun.github.io/fed_monitor/")
+        page.wait_for_load_state('networkidle')
+        page.wait_for_timeout(2000)
+        page.screenshot(path=f"/tmp/dashboard_{vp['name']}.png", full_page=True)
+        page.close()
+    browser.close()
+```
+
+**Evaluation criteria:**
+
+| Perspective | Criteria |
+|-------------|----------|
+| Economist | Data hierarchy, metric groupings, time context |
+| Trader | Glanceability (<5s), signal clarity, mobile usability |
+| Professional | Visual consistency, chart best practices, color semantics |
+
+**Output:** Screenshot analysis, prioritized issues, specific fixes.
+
+---
+
 ## Quick Reference
 
 | Skill | Purpose |
@@ -149,3 +195,4 @@ gh run rerun <id>               # Re-run failed
 | `/fix-mobile` | Fix responsive design |
 | `/update-config` | Apply new config |
 | `/check-deploy` | Monitor deployments |
+| `/review-ui` | Professional UI review |

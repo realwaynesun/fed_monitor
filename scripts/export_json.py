@@ -130,11 +130,38 @@ def export_dashboard_data(output_dir: Path, days: int = 365):
         print(f"Warning: Could not evaluate alerts: {e}")
         alerts_data = {"critical": [], "warning": [], "info": []}
 
+    # Build key metrics summary for glanceable display
+    KEY_METRICS = [
+        ("effr", "EFFR", "percent", "rate"),
+        ("iorb", "IORB", "percent", "rate"),
+        ("sofr", "SOFR", "percent", "rate"),
+        ("effr_iorb_spread", "EFFR-IORB", "bps", "spread"),
+        ("sofr_effr_spread", "SOFR-EFFR", "bps", "spread"),
+        ("walcl_mil", "Fed Assets", "usd_millions", "balance"),
+        ("rrp_usage_bil", "RRP Usage", "usd_billions", "balance"),
+        ("reserves_bil", "Reserves", "usd_billions", "balance"),
+    ]
+
+    key_metrics_data = []
+    for key, label, unit, category in KEY_METRICS:
+        if key in latest:
+            m = latest[key]
+            key_metrics_data.append({
+                "key": key,
+                "label": label,
+                "unit": unit,
+                "category": category,
+                "value": m.get("value"),
+                "d1": m.get("d1"),
+                "date": m.get("date", ""),
+            })
+
     # Build final output
     output = {
         "generated_at": datetime.now().isoformat(),
         "date_range": {"start": start_str, "end": end_str},
         "config_version": config.version,
+        "key_metrics": key_metrics_data,
         "charts": charts_data,
         "tables": tables_data,
         "alerts": alerts_data,

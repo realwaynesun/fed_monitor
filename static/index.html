@@ -179,11 +179,95 @@
             color: var(--text-secondary);
         }
 
+        /* Key Metrics Summary Panel */
+        .key-metrics-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 25px;
+            padding: 15px;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .key-metric {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .key-metric .label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .key-metric .value {
+            font-size: 1.4rem;
+            font-weight: 600;
+            font-family: 'SF Mono', Monaco, monospace;
+            margin-bottom: 2px;
+        }
+
+        .key-metric .change {
+            font-size: 0.8rem;
+            font-family: 'SF Mono', Monaco, monospace;
+        }
+
+        .key-metric .change.positive { color: #4ecdc4; }
+        .key-metric .change.negative { color: #ff6b6b; }
+        .key-metric .change.neutral { color: var(--text-secondary); }
+
+        .key-metric.rate .value { color: var(--accent-cyan); }
+        .key-metric.spread .value { color: var(--accent-yellow); }
+        .key-metric.balance .value { color: var(--accent-teal); }
+
+        /* Improved Alert Items */
+        .alert-item {
+            font-size: 0.85rem;
+            padding: 8px 0;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .alert-item .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-top: 6px;
+            flex-shrink: 0;
+        }
+
+        .alert-box.critical .status-dot { background: #ff4444; }
+        .alert-box.warning .status-dot { background: #ffaa00; }
+        .alert-box.info .status-dot { background: #00aaff; }
+
+        .alert-item .alert-content { flex: 1; }
+
+        .alert-item strong {
+            color: var(--accent-cyan);
+        }
+
         /* Tablet styles */
         @media (max-width: 768px) {
             .container { padding: 12px; }
             header h1 { font-size: 1.4rem; }
             header .meta { font-size: 0.8rem; }
+            .key-metrics-panel {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+                padding: 10px;
+            }
+            .key-metric { padding: 10px 6px; }
+            .key-metric .label { font-size: 0.65rem; }
+            .key-metric .value { font-size: 1.1rem; }
+            .key-metric .change { font-size: 0.7rem; }
             .alerts-panel { grid-template-columns: 1fr; gap: 10px; }
             .alert-box { padding: 12px; }
             .alert-count { font-size: 1.5rem; }
@@ -197,9 +281,19 @@
         /* Phone styles */
         @media (max-width: 480px) {
             .container { padding: 8px; }
-            header { padding: 15px 0; margin-bottom: 20px; }
+            header { padding: 15px 0; margin-bottom: 15px; }
             header h1 { font-size: 1.2rem; }
             header .meta { font-size: 0.75rem; line-height: 1.4; }
+            .key-metrics-panel {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 6px;
+                padding: 8px;
+                margin-bottom: 15px;
+            }
+            .key-metric { padding: 8px 4px; border-radius: 6px; }
+            .key-metric .label { font-size: 0.6rem; margin-bottom: 2px; }
+            .key-metric .value { font-size: 0.95rem; }
+            .key-metric .change { font-size: 0.6rem; }
             .alerts-panel { gap: 8px; margin-bottom: 20px; }
             .alert-box { padding: 10px; }
             .alert-box h3 { font-size: 0.75rem; margin-bottom: 5px; }
@@ -231,6 +325,7 @@
             <div class="meta" id="header-meta">Loading...</div>
         </header>
 
+        <div id="key-metrics-section"></div>
         <div id="alerts-section"></div>
         <div id="charts-section"><div class="loading">Loading charts...</div></div>
         <h2 class="section-title">Data Tables</h2>
@@ -436,10 +531,40 @@
             return sign + value.toFixed(2);
         }
 
-        // Render alerts
+        // Render key metrics summary panel
+        function renderKeyMetrics(keyMetrics) {
+            const section = document.getElementById('key-metrics-section');
+            if (!keyMetrics || keyMetrics.length === 0) {
+                section.innerHTML = '';
+                return;
+            }
+
+            let html = '<div class="key-metrics-panel">';
+            keyMetrics.forEach(m => {
+                const changeClass = m.d1 > 0 ? 'positive' : (m.d1 < 0 ? 'negative' : 'neutral');
+                const changeStr = m.d1 !== null ? formatChange(m.d1) : '--';
+
+                html += `<div class="key-metric ${m.category}">
+                    <div class="label">${m.label}</div>
+                    <div class="value">${formatValue(m.value, m.unit)}</div>
+                    <div class="change ${changeClass}">${changeStr}</div>
+                </div>`;
+            });
+            html += '</div>';
+            section.innerHTML = html;
+        }
+
+        // Render alerts with status dots
         function renderAlerts(alerts) {
             const section = document.getElementById('alerts-section');
             const { critical, warning, info } = alerts;
+
+            const renderAlertItems = (items) => items.map(a =>
+                `<div class="alert-item">
+                    <span class="status-dot"></span>
+                    <div class="alert-content"><strong>${a.key}</strong>: ${a.note}</div>
+                </div>`
+            ).join('');
 
             let html = '<div class="alerts-panel">';
 
@@ -447,21 +572,21 @@
             html += `<div class="alert-box critical">
                 <h3>Critical</h3>
                 <div class="alert-count">${critical.length}</div>
-                ${critical.map(a => `<div class="alert-item"><strong>${a.key}</strong>: ${a.note}</div>`).join('')}
+                ${renderAlertItems(critical)}
             </div>`;
 
             // Warning
             html += `<div class="alert-box warning">
                 <h3>Warning</h3>
                 <div class="alert-count">${warning.length}</div>
-                ${warning.map(a => `<div class="alert-item"><strong>${a.key}</strong>: ${a.note}</div>`).join('')}
+                ${renderAlertItems(warning)}
             </div>`;
 
             // Info
             html += `<div class="alert-box info">
                 <h3>Info</h3>
                 <div class="alert-count">${info.length}</div>
-                ${info.map(a => `<div class="alert-item"><strong>${a.key}</strong>: ${a.note}</div>`).join('')}
+                ${renderAlertItems(info)}
             </div>`;
 
             html += '</div>';
@@ -549,6 +674,30 @@
                 }];
             }
 
+            // Add current value annotations (show latest value for each series)
+            // Only on desktop/tablet, and only for first 3 series to avoid clutter
+            if (screenType !== 'phone' && chartData.series.length <= 4) {
+                layout.annotations = chartData.series.slice(0, 3).map((s, i) => {
+                    const lastIdx = s.values.length - 1;
+                    const lastVal = s.values[lastIdx];
+                    const shortLabel = SHORT_LABELS[s.label] || s.label;
+                    if (lastVal === null || lastVal === undefined) return null;
+
+                    return {
+                        x: 1,
+                        y: lastVal,
+                        xref: 'paper',
+                        yref: 'y',
+                        text: `${lastVal.toFixed(2)}`,
+                        showarrow: false,
+                        font: { size: 9, color: COLORS[i % COLORS.length] },
+                        xanchor: 'left',
+                        bgcolor: 'rgba(26,29,36,0.8)',
+                        borderpad: 2,
+                    };
+                }).filter(a => a !== null);
+            }
+
             Plotly.newPlot(div.id, traces, layout, { responsive: true, displayModeBar: false });
         }
 
@@ -617,6 +766,7 @@
                 cachedChartData = data.charts;
 
                 // Render sections
+                renderKeyMetrics(data.key_metrics);
                 renderAlerts(data.alerts);
                 renderCharts(data.charts);
                 renderTables(data.tables);

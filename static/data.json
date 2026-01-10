@@ -1,10 +1,57 @@
 {
-  "generated_at": "2026-01-10T15:27:17.843387",
+  "generated_at": "2026-01-11T01:51:32.568026",
   "date_range": {
-    "start": "2025-01-10",
-    "end": "2026-01-10"
+    "start": "2025-01-11",
+    "end": "2026-01-11"
   },
   "config_version": "3.0",
+  "key_metrics": [
+    {
+      "key": "effr",
+      "label": "EFFR",
+      "unit": "percent",
+      "category": "rate",
+      "value": 3.64,
+      "d1": 0.0,
+      "date": "2026-01-09"
+    },
+    {
+      "key": "iorb",
+      "label": "IORB",
+      "unit": "percent",
+      "category": "rate",
+      "value": 3.65,
+      "d1": 0.0,
+      "date": "2026-01-09"
+    },
+    {
+      "key": "sofr",
+      "label": "SOFR",
+      "unit": "percent",
+      "category": "rate",
+      "value": 3.64,
+      "d1": 0.0,
+      "date": "2026-01-09"
+    },
+    {
+      "key": "walcl_mil",
+      "label": "Fed Assets",
+      "unit": "usd_millions",
+      "category": "balance",
+      "value": 6573602.0,
+      "d1": 0.0,
+      "date": "2026-01-09"
+    },
+    {
+      "key": "rrp_usage_bil",
+      "label": "RRP Usage",
+      "unit": "usd_billions",
+      "category": "balance",
+      "value": 3.083,
+      "d1": 0.0,
+      "date": "2026-01-09"
+    }
+  ],
   "charts": [
     {
       "title": "Policy Rate Corridor",
@@ -17,7 +64,6 @@
           "key": "dfedtarl",
           "label": "Fed Funds Target Range - Lower",
           "dates": [
-            "2025-01-10",
             "2025-01-11",
             "2025-01-12",
             "2025-01-13",
@@ -384,7 +430,6 @@
             "2026-01-09"
           ],
           "values": [
-            4.25,
             4.25,
             4.25,
             4.25,
@@ -755,7 +800,6 @@
           "key": "rrp_offering",
           "label": "ON RRP Offering Rate",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -1176,7 +1220,6 @@
             4.25,
             4.25,
             4.25,
-            4.25,
             4.0,
             4.0,
             4.0,
@@ -1259,7 +1302,6 @@
           "key": "effr",
           "label": "Effective Federal Funds Rate",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -1682,7 +1724,6 @@
             4.33,
             4.33,
             4.33,
-            4.33,
             4.08,
             4.08,
             4.09,
@@ -1765,7 +1806,6 @@
           "key": "iorb",
           "label": "Interest Rate on Reserve Balances",
           "dates": [
-            "2025-01-10",
             "2025-01-11",
             "2025-01-12",
             "2025-01-13",
@@ -2132,7 +2172,6 @@
             "2026-01-09"
           ],
           "values": [
-            4.4,
             4.4,
             4.4,
             4.4,
@@ -2503,7 +2542,6 @@
           "key": "dfedtaru",
           "label": "Fed Funds Target Range - Upper",
           "dates": [
-            "2025-01-10",
             "2025-01-11",
             "2025-01-12",
             "2025-01-13",
@@ -3120,7 +3158,6 @@
             4.5,
             4.5,
             4.5,
-            4.5,
             4.25,
             4.25,
             4.25,
@@ -3241,7 +3278,6 @@
           "key": "dpcredit",
           "label": "Discount Window Primary Credit Rate",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -3679,7 +3715,6 @@
             4.5,
             4.5,
             4.5,
-            4.5,
             4.25,
             4.25,
             4.25,
@@ -3774,7 +3809,6 @@
           "key": "sofr",
           "label": "Secured Overnight Financing Rate",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -4024,7 +4058,6 @@
             "2026-01-08"
           ],
           "values": [
-            4.3,
             4.29,
             4.28,
             4.28,
@@ -4278,7 +4311,6 @@
           "key": "tgcr",
           "label": "Tri-Party General Collateral Rate",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -4528,7 +4560,6 @@
             "2026-01-08"
           ],
           "values": [
-            4.29,
             4.28,
             4.27,
             4.26,
@@ -4782,7 +4813,6 @@
           "key": "srf_rate",
           "label": "Standing Repo Facility Rate",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -5205,7 +5235,6 @@
             4.5,
             4.5,
             4.5,
-            4.5,
             4.25,
             4.25,
             4.25,
@@ -5288,7 +5317,6 @@
           "key": "rrp_offering",
           "label": "ON RRP Offering Rate",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -5538,7 +5566,6 @@
             "2026-01-08"
           ],
           "values": [
-            4.25,
             4.25,
             4.25,
             4.25,
@@ -5801,7 +5828,6 @@
           "key": "effr_vs_target_mid",
           "label": "EFFR vs Target Midpoint",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -6052,7 +6078,6 @@
             "2026-01-08"
           ],
           "values": [
-            -4.5,
             -4.5,
             -4.5,
             -4.5,
@@ -6307,7 +6332,6 @@
           "key": "spread_effr_iorb",
           "label": "EFFR - IORB Spread",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -6732,7 +6756,6 @@
             -7.0,
             -7.0,
             -7.0,
-            -7.0,
             -6.0,
             -6.0,
             -6.0,
@@ -6813,7 +6836,6 @@
           "key": "spread_sofr_effr",
           "label": "SOFR - EFFR Spread",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -7063,7 +7085,6 @@
             "2026-01-08"
           ],
           "values": [
-            -3.0,
             -4.0,
             -5.0,
             -5.0,
@@ -7317,7 +7338,6 @@
           "key": "spread_sofr_rrp",
           "label": "SOFR - ON RRP Offering Spread",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -7567,7 +7587,6 @@
             "2026-01-08"
           ],
           "values": [
-            5.0,
             4.0,
             3.0,
             3.0,
@@ -7821,7 +7840,6 @@
           "key": "mm_tightness_bps",
           "label": "Money-Market Tightness Index (vs IORB)",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -8071,7 +8089,6 @@
             "2026-01-08"
           ],
           "values": [
-            -8.75,
             -9.25,
             -9.75,
             -10.0,
@@ -8334,7 +8351,6 @@
           "key": "effr_tail_bp",
           "label": "EFFR Tail Range (99-1)",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -8585,7 +8601,6 @@
             "2026-01-08"
           ],
           "values": [
-            4.0,
             4.0,
             4.0,
             4.0,
@@ -8840,7 +8855,6 @@
           "key": "obfr_tail_bp",
           "label": "OBFR Tail Range (99-1)",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -9091,7 +9105,6 @@
             "2026-01-08"
           ],
           "values": [
-            11.0,
             12.0,
             12.0,
             13.0,
@@ -9346,7 +9359,6 @@
           "key": "sofr_tail_bp",
           "label": "SOFR Tail Range (99-1)",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -9596,7 +9608,6 @@
             "2026-01-08"
           ],
           "values": [
-            15.0,
             14.0,
             13.0,
             12.0,
@@ -9850,7 +9861,6 @@
           "key": "tgcr_tail_bp",
           "label": "TGCR Tail Range (99-1)",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -10100,7 +10110,6 @@
             "2026-01-08"
           ],
           "values": [
-            8.0,
             9.0,
             11.0,
             10.0,
@@ -10363,7 +10372,6 @@
           "key": "effr_volume_bil",
           "label": "EFFR Underlying Volume",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -10614,7 +10622,6 @@
             "2026-01-08"
           ],
           "values": [
-            102.0,
             104.0,
             112.0,
             108.0,
@@ -10869,7 +10876,6 @@
           "key": "obfr_volume_bil",
           "label": "OBFR Underlying Volume",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -11120,7 +11126,6 @@
             "2026-01-08"
           ],
           "values": [
-            302.0,
             306.0,
             306.0,
             300.0,
@@ -11375,7 +11380,6 @@
           "key": "sofr_volume_bil",
           "label": "SOFR Underlying Volume",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -11625,7 +11629,6 @@
             "2026-01-08"
           ],
           "values": [
-            2204.0,
             2211.0,
             2179.0,
             2280.0,
@@ -11879,7 +11882,6 @@
           "key": "tgcr_volume_bil",
           "label": "TGCR Underlying Volume",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -12129,7 +12131,6 @@
             "2026-01-08"
           ],
           "values": [
-            837.0,
             837.0,
             825.0,
             844.0,
@@ -12392,7 +12393,6 @@
           "key": "rrp_usage_bil",
           "label": "ON RRP Usage",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -12642,7 +12642,6 @@
             "2026-01-08"
           ],
           "values": [
-            178.8,
             183.669,
             160.219,
             119.977,
@@ -12896,7 +12895,6 @@
           "key": "repo_overnight_bil",
           "label": "Overnight Repos (Treasury) - Amount",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -13146,7 +13144,6 @@
             "2026-01-08"
           ],
           "values": [
-            0.0,
             0.0,
             0.001,
             0.0,
@@ -15130,7 +15127,6 @@
           "key": "nfci",
           "label": "Chicago Fed National Financial Conditions Index",
           "dates": [
-            "2025-01-10",
             "2025-01-17",
             "2025-01-24",
             "2025-01-31",
@@ -15184,7 +15180,6 @@
             "2026-01-02"
           ],
           "values": [
-            -0.4993,
             -0.5046,
             -0.5096,
             -0.5123,
@@ -15242,7 +15237,6 @@
           "key": "stl_fsi",
           "label": "St. Louis Fed Financial Stress Index",
           "dates": [
-            "2025-01-10",
             "2025-01-17",
             "2025-01-24",
             "2025-01-31",
@@ -15296,7 +15290,6 @@
             "2026-01-02"
           ],
           "values": [
-            -0.8015,
             -0.8277,
             -0.9771,
             -0.7645,
@@ -15391,7 +15384,6 @@
           "key": "hy_oas_bp",
           "label": "High Yield OAS (bps)",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -15653,7 +15645,6 @@
             "2026-01-08"
           ],
           "values": [
-            281.0,
             285.0,
             280.0,
             272.0,
@@ -15919,7 +15910,6 @@
           "key": "ig_oas_bp",
           "label": "Investment Grade OAS (bps)",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -16181,7 +16171,6 @@
             "2026-01-08"
           ],
           "values": [
-            83.0,
             84.0,
             84.0,
             83.0,
@@ -16456,7 +16445,6 @@
           "key": "vix",
           "label": "CBOE Volatility Index (VIX)",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -16715,7 +16703,6 @@
             "2026-01-08"
           ],
           "values": [
-            19.54,
             19.19,
             18.71,
             16.12,
@@ -16987,7 +16974,6 @@
           "key": "dgs3mo",
           "label": "3-Month Treasury Yield",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -17236,7 +17222,6 @@
             "2026-01-07"
           ],
           "values": [
-            4.36,
             4.37,
             4.36,
             4.35,
@@ -17489,7 +17474,6 @@
           "key": "dgs2",
           "label": "2-Year Treasury Yield",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -17738,7 +17722,6 @@
             "2026-01-07"
           ],
           "values": [
-            4.4,
             4.4,
             4.37,
             4.27,
@@ -17991,7 +17974,6 @@
           "key": "dgs10",
           "label": "10-Year Treasury Yield",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -18240,7 +18222,6 @@
             "2026-01-07"
           ],
           "values": [
-            4.77,
             4.79,
             4.78,
             4.66,
@@ -18502,7 +18483,6 @@
           "key": "curve_10y3m_bp",
           "label": "10Y-3M Treasury Curve (bps)",
           "dates": [
-            "2025-01-10",
             "2025-01-13",
             "2025-01-14",
             "2025-01-15",
@@ -18752,7 +18732,6 @@
             "2026-01-08"
           ],
           "values": [
-            41.0,
             42.0,
             42.0,
             31.0,
@@ -19314,7 +19293,7 @@
   "alerts": {
     "critical": [
       {
-        "alert_id": "reserves_mil:critical:5213",
+        "alert_id": "reserves_mil:critical:4846",
         "key": "reserves_mil",
         "rule": "value < 3000000",
         "severity": "critical",
@@ -19344,7 +19323,7 @@
     ],
     "warning": [
       {
-        "alert_id": "spread_effr_iorb:warning:2718",
+        "alert_id": "spread_effr_iorb:warning:9702",
         "key": "spread_effr_iorb",
         "rule": "ma5 > -2",
         "severity": "warning",
@@ -19372,7 +19351,7 @@
         "previous_state": null
       },
       {
-        "alert_id": "spread_sofr_rrp:warning:1936",
+        "alert_id": "spread_sofr_rrp:warning:3253",
         "key": "spread_sofr_rrp",
         "rule": "ma5 > 5",
         "severity": "warning",
@@ -19400,7 +19379,7 @@
         "previous_state": null
       },
       {
-        "alert_id": "spread_tgcr_rrp:warning:1936",
+        "alert_id": "spread_tgcr_rrp:warning:3253",
         "key": "spread_tgcr_rrp",
         "rule": "ma5 > 5",
         "severity": "warning",
@@ -19428,7 +19407,7 @@
         "previous_state": null
       },
       {
-        "alert_id": "reserves_to_bank_assets_pct:warning:2407",
+        "alert_id": "reserves_to_bank_assets_pct:warning:2539",
         "key": "reserves_to_bank_assets_pct",
         "rule": "value < 13",
         "severity": "warning",
@@ -19456,7 +19435,7 @@
         "previous_state": null
       },
       {
-        "alert_id": "reserves_mil:warning:4945",
+        "alert_id": "reserves_mil:warning:265",
         "key": "reserves_mil",
         "rule": "value < 3200000",
         "severity": "warning",
@@ -19486,7 +19465,7 @@
     ],
     "info": [
       {
-        "alert_id": "rrp_usage_bil:info:1163",
+        "alert_id": "rrp_usage_bil:info:6970",
         "key": "rrp_usage_bil",
         "rule": "value < 50",
         "severity": "info",
@@ -19514,7 +19493,7 @@
         "previous_state": null
       },
       {
-        "alert_id": "walcl_mil:info:8134",
+        "alert_id": "walcl_mil:info:239",
         "key": "walcl_mil",
         "rule": "d5 < -30000",
         "severity": "info",

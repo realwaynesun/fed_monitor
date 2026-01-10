@@ -1198,11 +1198,17 @@ panel:
   refresh_interval_seconds: 300 # 5 minutes
 
   charts:
-    - title: "Interest Rate Corridor & Reference Rates"
-      series: ["dfedtarl", "rrp_offering", "effr", "iorb", "sofr", "tgcr", "dfedtaru", "dpcredit", "srf_rate"]
+    - title: "Policy Rate Corridor"
+      series: ["dfedtarl", "rrp_offering", "effr", "iorb", "dfedtaru", "dpcredit"]
       chart_type: "line"
       y_axis_label: "Rate (%)"
-      height: 420
+      height: 380
+
+    - title: "Reference Rates (SOFR, TGCR, SRF)"
+      series: ["sofr", "tgcr", "srf_rate", "rrp_offering"]
+      chart_type: "line"
+      y_axis_label: "Rate (%)"
+      height: 340
 
     - title: "Key Money-Market Spreads (bps)"
       series: ["effr_vs_target_mid", "spread_effr_iorb", "spread_sofr_effr", "spread_sofr_rrp", "mm_tightness_bps"]
@@ -1255,7 +1261,7 @@ panel:
 
     - title: "Stress Backstops (Outstanding)"
       series: ["dw_primary_mil", "swaps_mil", "foreign_official_repo_mil"]
-      chart_type: "bar"
+      chart_type: "line"
       y_axis_label: "USD Millions"
       height: 360
 
@@ -1266,17 +1272,30 @@ panel:
       reference_line: 0
       height: 320
 
-    - title: "Credit Spreads & Volatility"
-      series: ["hy_oas_bp", "ig_oas_bp", "vix"]
+    - title: "Credit Spreads (OAS)"
+      series: ["hy_oas_bp", "ig_oas_bp"]
       chart_type: "line"
-      y_axis_label: "bps / index"
+      y_axis_label: "Spread (bps)"
       height: 320
 
-    - title: "Treasury Yields & Curve"
-      series: ["dgs3mo", "dgs2", "dgs10", "curve_10y3m_bp"]
+    - title: "Equity Volatility (VIX)"
+      series: ["vix"]
+      chart_type: "area"
+      y_axis_label: "VIX Index"
+      height: 280
+
+    - title: "Treasury Yields"
+      series: ["dgs3mo", "dgs2", "dgs10"]
       chart_type: "line"
-      y_axis_label: "% / bps"
+      y_axis_label: "Yield (%)"
       height: 320
+
+    - title: "Treasury Curve (10Y - 3M)"
+      series: ["curve_10y3m_bp"]
+      chart_type: "area"
+      y_axis_label: "Spread (bps)"
+      reference_line: 0
+      height: 280
 
   tables:
     - title: "Current Policy & Funding Snapshot"

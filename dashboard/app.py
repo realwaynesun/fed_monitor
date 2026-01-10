@@ -166,6 +166,44 @@ def hex_to_rgba(hex_color: str, alpha: float = 0.3) -> str:
     return f"rgba({r}, {g}, {b}, {alpha})"
 
 
+def format_axis_value(value: float, unit_hint: str = "") -> str:
+    """Format large numbers for Y-axis display."""
+    if "Million" in unit_hint or "mil" in unit_hint.lower():
+        # Values are in millions, display as T/B
+        if abs(value) >= 1_000_000:
+            return f"{value / 1_000_000:.1f}T"
+        elif abs(value) >= 1_000:
+            return f"{value / 1_000:.0f}B"
+        else:
+            return f"{value:.0f}M"
+    elif "Billion" in unit_hint or "bil" in unit_hint.lower():
+        if abs(value) >= 1_000:
+            return f"{value / 1_000:.1f}T"
+        else:
+            return f"{value:.0f}B"
+    return f"{value:,.0f}"
+
+
+def get_tickformat(y_label: str) -> dict:
+    """Get appropriate tick formatting based on y-axis label."""
+    if "Million" in y_label:
+        # Data in millions - show as B or T
+        return dict(
+            tickformat=".2s",
+            ticksuffix="",
+        )
+    elif "Billion" in y_label:
+        return dict(
+            tickformat=".2s",
+            ticksuffix="",
+        )
+    elif "%" in y_label or "Percent" in y_label.lower():
+        return dict(tickformat=".2f")
+    elif "bps" in y_label.lower() or "Spread" in y_label:
+        return dict(tickformat=".0f")
+    return {}
+
+
 def create_line_chart(
     df: pd.DataFrame,
     series_keys: list[str],
@@ -181,6 +219,14 @@ def create_line_chart(
 
     fig = go.Figure()
 
+    # Determine hover format based on y_label
+    if "Million" in y_label:
+        hover_fmt = ",.0f"
+    elif "Billion" in y_label:
+        hover_fmt = ",.1f"
+    else:
+        hover_fmt = ".4f"
+
     for i, key in enumerate(available):
         series_def = config.get_series(key) or config.get_derived(key) or {}
         label = series_def.get("label", key)
@@ -191,18 +237,22 @@ def create_line_chart(
             y=df[key],
             mode="lines+markers",
             name=label,
-            line=dict(color=color, width=3),
-            marker=dict(size=4, color=color),
-            hovertemplate=f"{label}: %{{y:.4f}}<extra></extra>",
+            line=dict(color=color, width=2),
+            marker=dict(size=3, color=color),
+            hovertemplate=f"{label}: %{{y:{hover_fmt}}}<extra></extra>",
         ))
 
     if reference_line is not None:
         fig.add_hline(y=reference_line, line_dash="dash", line_color="gray", opacity=0.5)
 
+    # Get tick formatting
+    tick_fmt = get_tickformat(y_label)
+
     fig.update_layout(
         title=title,
         xaxis_title="Date",
         yaxis_title=y_label,
+        yaxis=tick_fmt,
         height=height,
         hovermode="x unified",
         template="plotly_dark",
@@ -220,6 +270,7 @@ def create_area_chart(
     title: str,
     y_label: str,
     height: int = 400,
+    reference_line: float | None = None,
 ) -> go.Figure:
     """Create a Plotly area chart."""
     available = [k for k in series_keys if k in df.columns]
@@ -227,6 +278,14 @@ def create_area_chart(
         return None
 
     fig = go.Figure()
+
+    # Determine hover format based on y_label
+    if "Million" in y_label:
+        hover_fmt = ",.0f"
+    elif "Billion" in y_label:
+        hover_fmt = ",.1f"
+    else:
+        hover_fmt = ".2f"
 
     for i, key in enumerate(available):
         series_def = config.get_series(key) or config.get_derived(key) or {}
@@ -239,16 +298,23 @@ def create_area_chart(
             mode="lines+markers",
             fill="tozeroy",
             name=label,
-            line=dict(color=color, width=3),
-            marker=dict(size=4, color=color),
+            line=dict(color=color, width=2),
+            marker=dict(size=3, color=color),
             fillcolor=hex_to_rgba(color, 0.3),
-            hovertemplate=f"{label}: %{{y:,.0f}}<extra></extra>",
+            hovertemplate=f"{label}: %{{y:{hover_fmt}}}<extra></extra>",
         ))
+
+    if reference_line is not None:
+        fig.add_hline(y=reference_line, line_dash="dash", line_color="gray", opacity=0.5)
+
+    # Get tick formatting
+    tick_fmt = get_tickformat(y_label)
 
     fig.update_layout(
         title=title,
         xaxis_title="Date",
         yaxis_title=y_label,
+        yaxis=tick_fmt,
         height=height,
         hovermode="x unified",
         template="plotly_dark",
@@ -346,7 +412,7 @@ for chart_def in config.panel_charts:
     if chart_type == "line":
         fig = create_line_chart(df_chart, series, title, y_label, height, ref_line)
     elif chart_type == "area":
-        fig = create_area_chart(df_chart, series, title, y_label, height)
+        fig = create_area_chart(df_chart, series, title, y_label, height, ref_line)
     elif chart_type == "bar":
         fig = create_bar_chart(df_chart, series, title, y_label, height)
     else:

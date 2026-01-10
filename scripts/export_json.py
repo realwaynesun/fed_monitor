@@ -135,11 +135,11 @@ def export_dashboard_data(output_dir: Path, days: int = 365):
         ("effr", "EFFR", "percent", "rate"),
         ("iorb", "IORB", "percent", "rate"),
         ("sofr", "SOFR", "percent", "rate"),
-        ("effr_iorb_spread", "EFFR-IORB", "bps", "spread"),
-        ("sofr_effr_spread", "SOFR-EFFR", "bps", "spread"),
+        ("spread_effr_iorb", "EFFR-IORB", "bps", "spread"),
+        ("spread_sofr_effr", "SOFR-EFFR", "bps", "spread"),
         ("walcl_mil", "Fed Assets", "usd_millions", "balance"),
         ("rrp_usage_bil", "RRP Usage", "usd_billions", "balance"),
-        ("reserves_bil", "Reserves", "usd_billions", "balance"),
+        ("reserves_mil", "Reserves", "usd_millions", "balance"),
     ]
 
     key_metrics_data = []

@@ -1,32 +1,35 @@
 # Fed Monitor Implementation Plan
 
 ## Overview
-Build a Fed monetary policy monitoring system with:
-- **P0**: Web dashboard (Streamlit) for data visualization
-- **P1**: Telegram alerts on critical threshold breaches
 
-## Technology Stack
+Build a Fed monetary policy monitoring system with:
+- **P0**: Static HTML dashboard (GitHub Pages) for data visualization
+- **P1**: Telegram alerts on critical threshold breaches
+- **P2**: Automated UI review workflow
+
+---
+
+## Phase 1: Foundation (Completed)
+
+### Technology Stack
 
 | Component | Choice | Rationale |
 |-----------|--------|-----------|
-| Dashboard | Streamlit | Simplest for Python, good charts, easy to share later |
-| Database | SQLite | Sufficient for single user, ~20 series, 2 years |
-| Charts | Plotly (via Streamlit) | Interactive, good time series support |
+| Dashboard | Static HTML + Plotly.js | No server needed, GitHub Pages hosting |
+| Database | SQLite | Sufficient for single user, ~50 series, 2 years |
+| Charts | Plotly.js | Interactive, good time series support |
 | Data | pandas | Standard for time series manipulation |
 | HTTP | requests | Simple, no async complexity needed |
 | Telegram | requests (raw API) | Simpler than python-telegram-bot for just sending |
-| Scheduler | APScheduler | Robust, cron syntax support |
+| Scheduler | APScheduler + GitHub Actions | Local + automated daily updates |
 
-## Project Structure
-
-Location: `~/fed_monitor/`
+### Project Structure
 
 ```
 fed_monitor/
 ├── config/
-│   └── fed_monitor_config.yaml    # Your existing config (copy here)
+│   └── fed_monitor_config.yaml    # Series, derived metrics, alerts, charts
 ├── src/
-│   ├── __init__.py
 │   ├── config.py                  # YAML loader + validation
 │   ├── database.py                # SQLite schema + queries
 │   ├── fred_client.py             # FRED API wrapper
@@ -34,89 +37,180 @@ fed_monitor/
 │   ├── alerts.py                  # Rule evaluation + state tracking
 │   └── notifier.py                # Telegram sender
 ├── dashboard/
-│   └── app.py                     # Streamlit dashboard
+│   └── app.py                     # Streamlit dashboard (legacy)
+├── static/
+│   ├── index.html                 # Static dashboard
+│   └── data.json                  # Exported data for static site
 ├── scripts/
 │   ├── fetch_data.py              # CLI: fetch latest data
 │   ├── check_alerts.py            # CLI: evaluate alerts
+│   ├── export_json.py             # Export data to JSON
+│   ├── build_static.sh            # Build script
 │   └── run_scheduler.py           # Long-running scheduled jobs
-├── requirements.txt
-├── .env.example                   # Template for API keys
-└── fed_monitor.db                 # SQLite database (auto-created)
+├── .github/
+│   └── workflows/
+│       └── deploy-pages.yml       # GitHub Pages deployment
+├── .claude/
+│   └── SKILLS.md                  # Reusable workflows
+└── requirements.txt
 ```
 
-## Implementation Phases
+---
 
-### Phase 1: Foundation
-1. **Config loader** (`src/config.py`)
-   - Parse YAML, validate structure
-   - Expose typed access to series, derived, alerts
+## Phase 2: Static Dashboard Migration (Completed)
 
-2. **Database** (`src/database.py`)
-   - Tables: `observations`, `derived_metrics`, `alerts_log`, `fetch_log`
-   - Helper functions for insert/query
+### Goal
+Replace Streamlit with static HTML for:
+- Zero server maintenance
+- Free GitHub Pages hosting
+- Full control over design
+- Mobile-friendly responsive design
 
-3. **FRED client** (`src/fred_client.py`)
-   - Fetch single series
-   - Handle rate limiting (100 req/min)
-   - Backfill support (2 years)
+### Implementation Steps
+1. Create `scripts/export_json.py` to export dashboard data
+2. Create `static/index.html` with Plotly.js charts
+3. Add responsive CSS for mobile/tablet
+4. Set up GitHub Actions for daily deployment
 
-### Phase 2: Metrics Engine
-4. **Metrics calculator** (`src/metrics.py`)
-   - Evaluate derived expressions (safe eval with pandas)
-   - Compute rolling stats (ma5, ma20, std20, zscore20)
-   - Compute diffs (d1, d5, d20, pct1, pct5)
+### Key Features
+- Dark theme matching original Streamlit design
+- Interactive Plotly.js charts
+- Responsive layout (desktop, tablet, phone)
+- Automatic daily updates via GitHub Actions
 
-### Phase 3: Dashboard (P0)
-5. **Streamlit app** (`dashboard/app.py`)
-   - Sidebar: date range picker (30D/90D/1Y/Custom)
-   - 8 charts as defined in config
-   - 2 data tables
-   - Manual refresh button
-   - Alert status panel (current breaches)
+---
 
-### Phase 4: Alerts (P1)
-6. **Alert evaluator** (`src/alerts.py`)
-   - Parse rule expressions
-   - Track state: OK ↔ BREACH
-   - Only notify on state transitions (not repeated breaches)
+## Phase 3: GitHub Pages Deployment (Completed)
 
-7. **Telegram notifier** (`src/notifier.py`)
-   - Send formatted messages
-   - Include: metric name, current value, threshold, trend context
+### Workflow: `.github/workflows/deploy-pages.yml`
 
-### Phase 5: Automation
-8. **Scheduler** (`scripts/run_scheduler.py`)
-   - Daily fetch at 7am Tokyo (weekdays)
-   - Weekly H.4.1 fetch Thursday 8am
-   - Alert checks every 30 min during trading hours
-   - Daily summary at 10pm (significant changes only)
+```yaml
+name: Deploy to GitHub Pages
+on:
+  schedule:
+    - cron: '0 7 * * *'  # Daily at 7am UTC
+  push:
+    branches: [main]
+  workflow_dispatch:
 
-## Key Design Decisions
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - Checkout repo
+      - Setup Python
+      - Install dependencies
+      - Fetch FRED data
+      - Export to JSON
+      - Deploy to GitHub Pages
+```
 
-### Derived Metrics Evaluation
-Use pandas eval with a restricted namespace:
+### URL
+https://realwaynesun.github.io/fed_monitor/
+
+---
+
+## Phase 4: Professional UI Review (Completed)
+
+### Goal
+Automated dashboard review from economist/trader perspective using Playwright.
+
+### Review Criteria
+
+#### 1. Professional Economist Perspective
+- **Data hierarchy**: Most important metrics (EFFR, reserves, spreads) prominently displayed
+- **Alert clarity**: Threshold breaches immediately visible and actionable
+- **Metric groupings**: Logical groupings (policy rates, balance sheet, financial stress)
+- **Time context**: Sufficient historical context for trend analysis
+
+#### 2. Trader Perspective
+- **Glanceability**: Key readings understood in <5 seconds
+- **Signal clarity**: Warning signs (spread blowouts, reserve stress) unmistakable
+- **Comparison ease**: Related metrics easily compared (EFFR vs IORB)
+- **Mobile usability**: Usable on phone between trades
+
+#### 3. Technical Professionalism
+- **Visual consistency**: Consistent colors, fonts, spacing
+- **Chart best practices**: Appropriate chart types, clear labels, readable axes
+- **Information density**: Right balance of data vs whitespace
+- **Color semantics**: Red=bad, green=good applied consistently
+
+### Implementation
+1. Install Playwright in venv
+2. Capture screenshots at 3 viewports (desktop, tablet, phone)
+3. Analyze against criteria
+4. Implement fixes
+5. Deploy and verify
+
+### Playwright Script
 ```python
-# Safe: only allows series keys + basic math
-df.eval("(effr - iorb) * 100")
+from playwright.sync_api import sync_playwright
+
+VIEWPORTS = [
+    {"name": "desktop", "width": 1920, "height": 1080},
+    {"name": "tablet", "width": 768, "height": 1024},
+    {"name": "phone", "width": 375, "height": 812},
+]
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    for vp in VIEWPORTS:
+        page = browser.new_page(viewport={"width": vp["width"], "height": vp["height"]})
+        page.goto("https://realwaynesun.github.io/fed_monitor/")
+        page.wait_for_load_state('networkidle')
+        page.wait_for_timeout(2000)
+        page.screenshot(path=f"/tmp/dashboard_{vp['name']}.png", full_page=True)
+        page.close()
+    browser.close()
 ```
 
-### Alert State Tracking
-Store in SQLite `alerts_log`:
-```
-| alert_key | state | last_transition_time | last_value |
-```
-Only send Telegram when `state` changes from OK to BREACH.
+---
 
-### Forward-Fill for Weekly Data
-When loading data for dashboard/alerts:
-```python
-df = df.resample('D').ffill()  # Fill gaps in weekly series
-```
+## Phase 5: Dashboard Improvements (Completed)
 
-### Dashboard Sharing (Later)
-- Option 1: Streamlit Community Cloud (free, public URL)
-- Option 2: Basic auth via `streamlit-authenticator`
-- Option 3: Deploy on cloud VM with nginx + password
+### Key Metrics Summary Panel
+- 8 metrics at top for instant glance
+- EFFR, IORB, SOFR (rates - cyan)
+- EFFR-IORB, SOFR-EFFR (spreads - yellow)
+- Fed Assets, RRP Usage, Reserves (balance - teal)
+- Daily change indicators (+/-)
+
+### Alert Visibility Improvements
+- Status dots next to each alert item
+- Color-coded by severity (red/yellow/blue)
+- Better visual hierarchy
+
+### Chart Enhancements
+- Current value annotations on desktop/tablet
+- Line styles for visual hierarchy (dashed for bounds)
+- Short labels for cleaner legends
+
+### Responsive Design
+- 4-column grid for key metrics on all devices
+- Hidden legends on phone (hover to see)
+- Taller charts on mobile (280px)
+- Horizontal scrollable tables
+
+---
+
+## Future Plans
+
+### P2: Enhanced Alerts
+- Email notifications as backup to Telegram
+- Weekly summary reports
+- Alert history dashboard
+
+### P3: Data Enhancements
+- Add more FRED series (bank reserves, repo volumes)
+- Historical event annotations on charts
+- Recession shading
+
+### P4: Advanced Features
+- Custom alert rules via UI
+- Multiple dashboard themes
+- Export to PDF reports
+
+---
 
 ## Environment Variables (.env)
 
@@ -126,66 +220,44 @@ TELEGRAM_BOT_TOKEN=your_bot_token
 TELEGRAM_CHAT_ID=your_chat_id
 ```
 
-## FRED API Key Instructions
+---
 
-1. Go to https://fred.stlouisfed.org/
-2. Click "My Account" → Sign up (free)
-3. Go to "API Keys" in account settings
-4. Click "Request API Key"
-5. Copy key to `.env` file
+## Quick Commands
 
-## Telegram Bot Setup
-
-1. Message @BotFather on Telegram
-2. Send `/newbot`, follow prompts
-3. Copy the bot token to `.env`
-4. Message your new bot, then visit:
-   `https://api.telegram.org/bot<TOKEN>/getUpdates`
-5. Find your `chat_id` in the response, add to `.env`
-
-## Verification Plan
-
-### After Phase 1-2 (Foundation):
 ```bash
-python scripts/fetch_data.py --backfill
-# Verify: fed_monitor.db has data, no errors
+# Setup
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Data
+python scripts/fetch_data.py --backfill    # Full 2-year backfill
+python scripts/fetch_data.py               # Incremental fetch
+
+# Build static site
+python scripts/export_json.py              # Export to JSON
+cd static && python3 -m http.server 8080   # Local preview
+
+# Alerts
+python scripts/check_alerts.py --dry-run   # Evaluate without notifications
+python scripts/check_alerts.py --summary   # Show current breaches
+
+# UI Review
+source venv/bin/activate
+pip install playwright
+playwright install chromium
+python /tmp/capture_dashboard.py           # Capture screenshots
 ```
 
-### After Phase 3 (Dashboard):
-```bash
-streamlit run dashboard/app.py
-# Verify: All 8 charts render, tables show values
-```
+---
 
-### After Phase 4-5 (Alerts):
-```bash
-python scripts/check_alerts.py --dry-run
-# Verify: Rules evaluate, state tracking works
-# Then test with real Telegram notification
-```
+## Verification Checklist
 
-## Dependencies (requirements.txt)
-
-```
-pandas>=2.0
-pyyaml>=6.0
-requests>=2.28
-streamlit>=1.30
-plotly>=5.18
-python-dotenv>=1.0
-apscheduler>=3.10
-```
-
-## Estimated Lines of Code
-
-| File | ~Lines |
-|------|--------|
-| config.py | 80 |
-| database.py | 120 |
-| fred_client.py | 100 |
-| metrics.py | 150 |
-| alerts.py | 100 |
-| notifier.py | 50 |
-| dashboard/app.py | 300 |
-| scripts/* | 150 |
-| **Total** | **~1050** |
+- [x] FRED data fetching works
+- [x] Derived metrics calculate correctly
+- [x] Static dashboard renders all charts
+- [x] GitHub Pages deployment succeeds
+- [x] Mobile responsive design works
+- [x] Key metrics panel shows all 8 metrics
+- [x] Alerts display with status dots
+- [x] Playwright screenshots capture correctly

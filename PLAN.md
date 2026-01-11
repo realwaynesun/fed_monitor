@@ -36,8 +36,6 @@ fed_monitor/
 │   ├── metrics.py                 # Derived metrics + rolling calcs
 │   ├── alerts.py                  # Rule evaluation + state tracking
 │   └── notifier.py                # Telegram sender
-├── dashboard/
-│   └── app.py                     # Streamlit dashboard (legacy)
 ├── static/
 │   ├── index.html                 # Static dashboard
 │   └── data.json                  # Exported data for static site

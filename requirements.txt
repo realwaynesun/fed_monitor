@@ -1,7 +1,9 @@
 pandas>=2.0
 pyyaml>=6.0
 requests>=2.28
-streamlit>=1.30
 plotly>=5.18
 python-dotenv>=1.0
 apscheduler>=3.10
+
+# Optional: for UI review with Playwright
+# playwright>=1.40

@@ -16,8 +16,9 @@ python scripts/fetch_data.py --backfill    # Initial 2-year backfill
 python scripts/fetch_data.py               # Incremental fetch (new data only)
 python scripts/fetch_data.py --days 30     # Fetch last N days
 
-# Dashboard
-streamlit run dashboard/app.py
+# Static Dashboard
+python scripts/export_json.py              # Export data to JSON
+cd static && python3 -m http.server 8080   # Local preview
 
 # Alerts
 python scripts/check_alerts.py --dry-run   # Evaluate without notifications
@@ -26,14 +27,18 @@ python scripts/check_alerts.py --test-telegram  # Test Telegram connection
 
 # Scheduler (long-running daemon)
 python scripts/run_scheduler.py
+
+# UI Review (requires playwright)
+pip install playwright && playwright install chromium
+python /tmp/capture_dashboard.py           # See .claude/SKILLS.md for script
 ```
 
 ## Environment Variables
 
 Required in `.env`:
 - `FRED_API_KEY` - Get from https://fred.stlouisfed.org/ (My Account → API Keys)
-- `TELEGRAM_BOT_TOKEN` - Create via @BotFather on Telegram (required for alerts)
-- `TELEGRAM_CHAT_ID` - Your chat ID for receiving notifications
+- `TELEGRAM_BOT_TOKEN` - Create via @BotFather on Telegram (optional, for alerts)
+- `TELEGRAM_CHAT_ID` - Your chat ID for receiving notifications (optional)
 
 ## Architecture
 
@@ -42,16 +47,17 @@ This is a Fed monetary policy monitoring system that fetches FRED data, calculat
 ### Data Flow
 
 1. **FRED API → SQLite**: `fred_client.py` fetches raw series, stores in `observations` table
-2. **Raw → Derived**: `metrics.py` calculates derived metrics (spreads, ratios) using pandas eval on expressions from config
-3. **Derived → Alerts**: `alerts.py` evaluates rule expressions against metric context (value, d1, d5, ma20, etc.)
-4. **Alerts → Telegram**: `notifier.py` sends on state transitions (OK→BREACH only, not repeated breaches)
+2. **Raw → Derived**: `metrics.py` calculates derived metrics (spreads, ratios) using pandas eval
+3. **Derived → Alerts**: `alerts.py` evaluates rule expressions against metric context
+4. **Export → Static**: `export_json.py` exports to `static/data.json`
+5. **Static → Browser**: `static/index.html` renders with Plotly.js
 
 ### Config-Driven Design
 
 Everything is defined in `config/fed_monitor_config.yaml`:
 - **series**: FRED series IDs to fetch (key, series_id, frequency, unit)
 - **derived**: Calculated metrics with pandas-compatible expressions (e.g., `"(effr - iorb) * 100"`)
-- **metrics**: Change periods (d1, d5, d20) and rolling windows (ma5, ma20, zscore20)
+- **metrics**: Change periods (d1, d5, d20) and rolling windows (ma5, ma20, ma60, zscore20, zscore60)
 - **alerts**: Rules like `"value > 5"` or `"abs(d1) > 100"` with severity levels
 - **panel**: Dashboard chart/table layouts
 
@@ -76,8 +82,17 @@ All changes to series, alerts, and dashboard layout are made in `config/fed_moni
 - **New series**: Run `fetch_data.py --backfill` to populate data
 - **New derived metrics**: Data calculated on-the-fly from raw series
 - **New alerts**: Take effect on next `check_alerts.py` run
-- **Dashboard changes**: Reflected on next page load (5-minute cache TTL)
+- **Dashboard changes**: Run `export_json.py` and deploy (or wait for daily GitHub Actions)
 
 ### Alert ID Generation
 
 Alert IDs are generated as `{key}:{severity}:{hash(rule) % 10000}`. This allows multiple rules per metric (e.g., warning at 10, critical at 25) while maintaining stable state tracking across config edits.
+
+### Deployment
+
+Static dashboard is deployed to GitHub Pages via `.github/workflows/deploy-pages.yml`:
+- Triggers daily at 7am UTC
+- Triggers on push to main
+- Manual trigger via `gh workflow run deploy-pages.yml`
+
+**Live URL**: https://realwaynesun.github.io/fed_monitor/

@@ -1,15 +1,15 @@
 """
-Metrics engine for Fed Monitor.
+Metrics engine for Fed Monitor and BOJ Monitor.
 Calculates derived metrics, rolling statistics, and period-over-period changes.
 """
 
 import re
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
 
-from .config import get_config
+from .config import get_config, get_monitor_config
 from .database import (
     get_all_observations,
     get_derived_metric,
@@ -21,6 +21,7 @@ def load_base_data(
     start_date: str | None = None,
     end_date: str | None = None,
     ffill: bool = True,
+    monitor: Literal["fed", "boj"] = "fed",
 ) -> pd.DataFrame:
     """
     Load all raw observations as a wide DataFrame.
@@ -29,11 +30,12 @@ def load_base_data(
         start_date: Start date filter
         end_date: End date filter
         ffill: Forward-fill missing values (for weekly series alignment)
+        monitor: Which monitor's config to use ("fed" or "boj")
 
     Returns:
         DataFrame with DatetimeIndex, one column per series
     """
-    config = get_config()
+    config = get_monitor_config(monitor)
     series_keys = config.series_keys
 
     df = get_all_observations(series_keys, start_date, end_date)
@@ -49,17 +51,21 @@ def load_base_data(
     return df
 
 
-def calculate_derived(df: pd.DataFrame) -> pd.DataFrame:
+def calculate_derived(
+    df: pd.DataFrame,
+    monitor: Literal["fed", "boj"] = "fed",
+) -> pd.DataFrame:
     """
     Calculate all derived metrics from raw data.
 
     Args:
         df: DataFrame with raw series as columns
+        monitor: Which monitor's config to use ("fed" or "boj")
 
     Returns:
         DataFrame with derived metric columns added
     """
-    config = get_config()
+    config = get_monitor_config(monitor)
     result = df.copy()
 
     for derived_def in config.derived:
@@ -77,18 +83,23 @@ def calculate_derived(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def calculate_changes(df: pd.DataFrame, column: str) -> pd.DataFrame:
+def calculate_changes(
+    df: pd.DataFrame,
+    column: str,
+    monitor: Literal["fed", "boj"] = "fed",
+) -> pd.DataFrame:
     """
     Calculate period-over-period changes for a column.
 
     Args:
         df: DataFrame with the column
         column: Column name to calculate changes for
+        monitor: Which monitor's config to use ("fed" or "boj")
 
     Returns:
         DataFrame with change columns (d1, d5, d20, pct1, pct5)
     """
-    config = get_config()
+    config = get_monitor_config(monitor)
     result = pd.DataFrame(index=df.index)
     series = df[column]
 
@@ -105,18 +116,23 @@ def calculate_changes(df: pd.DataFrame, column: str) -> pd.DataFrame:
     return result
 
 
-def calculate_rolling(df: pd.DataFrame, column: str) -> pd.DataFrame:
+def calculate_rolling(
+    df: pd.DataFrame,
+    column: str,
+    monitor: Literal["fed", "boj"] = "fed",
+) -> pd.DataFrame:
     """
     Calculate rolling statistics for a column.
 
     Args:
         df: DataFrame with the column
         column: Column name to calculate rolling stats for
+        monitor: Which monitor's config to use ("fed" or "boj")
 
     Returns:
         DataFrame with rolling columns (ma5, ma20, std20, zscore20)
     """
-    config = get_config()
+    config = get_monitor_config(monitor)
     result = pd.DataFrame(index=df.index)
     series = df[column]
 
@@ -141,6 +157,7 @@ def calculate_all_metrics(
     start_date: str | None = None,
     end_date: str | None = None,
     ffill: bool = True,
+    monitor: Literal["fed", "boj"] = "fed",
 ) -> pd.DataFrame:
     """
     Calculate all metrics: derived + changes + rolling for all series.
@@ -149,18 +166,19 @@ def calculate_all_metrics(
         start_date: Start date filter
         end_date: End date filter
         ffill: Forward-fill missing values (set False for chart display)
+        monitor: Which monitor's config to use ("fed" or "boj")
 
     Returns:
         DataFrame with all metrics as columns
     """
     # Load raw data
-    df = load_base_data(start_date, end_date, ffill=ffill)
+    df = load_base_data(start_date, end_date, ffill=ffill, monitor=monitor)
 
     if df.empty:
         return df
 
     # Calculate derived metrics
-    df = calculate_derived(df)
+    df = calculate_derived(df, monitor=monitor)
 
     # Calculate changes and rolling for each column
     all_columns = list(df.columns)
@@ -168,8 +186,8 @@ def calculate_all_metrics(
     rolling_dfs = []
 
     for col in all_columns:
-        changes_dfs.append(calculate_changes(df, col))
-        rolling_dfs.append(calculate_rolling(df, col))
+        changes_dfs.append(calculate_changes(df, col, monitor=monitor))
+        rolling_dfs.append(calculate_rolling(df, col, monitor=monitor))
 
     # Combine all
     for changes_df in changes_dfs:
@@ -180,20 +198,25 @@ def calculate_all_metrics(
     return df
 
 
-def get_latest_values() -> dict[str, dict[str, Any]]:
+def get_latest_values(
+    monitor: Literal["fed", "boj"] = "fed",
+) -> dict[str, dict[str, Any]]:
     """
     Get the latest value and key metrics for all series.
+
+    Args:
+        monitor: Which monitor's config to use ("fed" or "boj")
 
     Returns:
         Dict of series_key -> {value, d1, d5, d20, ma20, ...}
     """
-    df = calculate_all_metrics()
+    df = calculate_all_metrics(monitor=monitor)
 
     if df.empty:
         return {}
 
     # Get the last row with valid data for each base series
-    config = get_config()
+    config = get_monitor_config(monitor)
     all_keys = config.series_keys + config.derived_keys
 
     result = {}
@@ -232,6 +255,7 @@ def get_metric_value(
     metric_key: str,
     metric_type: str = "value",
     date: str | None = None,
+    monitor: Literal["fed", "boj"] = "fed",
 ) -> float | None:
     """
     Get a specific metric value for alert evaluation.
@@ -240,11 +264,12 @@ def get_metric_value(
         metric_key: The series or derived metric key
         metric_type: "value", "d1", "d5", "d20", "ma20", etc.
         date: Specific date (defaults to latest)
+        monitor: Which monitor's config to use ("fed" or "boj")
 
     Returns:
         The metric value or None if not available
     """
-    df = calculate_all_metrics()
+    df = calculate_all_metrics(monitor=monitor)
 
     if df.empty:
         return None
@@ -271,20 +296,25 @@ def get_metric_value(
     return series.iloc[-1]
 
 
-def store_derived_metrics() -> int:
+def store_derived_metrics(
+    monitor: Literal["fed", "boj"] = "fed",
+) -> int:
     """
     Calculate and store all derived metrics in the database.
+
+    Args:
+        monitor: Which monitor's config to use ("fed" or "boj")
 
     Returns:
         Total number of rows stored
     """
-    config = get_config()
-    df = load_base_data()
+    config = get_monitor_config(monitor)
+    df = load_base_data(monitor=monitor)
 
     if df.empty:
         return 0
 
-    df = calculate_derived(df)
+    df = calculate_derived(df, monitor=monitor)
 
     total = 0
     for key in config.derived_keys:

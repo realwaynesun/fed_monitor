@@ -26,3 +26,4 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+.ai-collab/

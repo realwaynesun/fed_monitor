@@ -55,6 +55,41 @@
             margin-top: 5px;
         }
 
+        /* Monitor Toggle */
+        .monitor-toggle {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .monitor-btn {
+            padding: 8px 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .monitor-btn:hover {
+            border-color: var(--accent-cyan);
+            color: var(--text-primary);
+        }
+
+        .monitor-btn.active {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+            border-color: var(--accent-cyan);
+        }
+
+        .monitor-btn.boj.active {
+            background: #ff6b6b;
+            border-color: #ff6b6b;
+        }
+
         .alerts-panel {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -323,6 +358,10 @@
         <header>
             <h1>Wayne's Macro Dashboard</h1>
             <div class="meta" id="header-meta">Loading...</div>
+            <div class="monitor-toggle">
+                <button class="monitor-btn fed active" onclick="switchMonitor('fed')">🇺🇸 FED</button>
+                <button class="monitor-btn boj" onclick="switchMonitor('boj')">🇯🇵 BOJ</button>
+            </div>
         </header>
 
         <div id="key-metrics-section"></div>
@@ -339,6 +378,9 @@
     </div>
 
     <script>
+        // Current monitor state
+        let currentMonitor = localStorage.getItem('monitor') || 'fed';
+
         // Color palette - distinct colors for readability
         const COLORS = [
             '#00D4FF', '#FF6B6B', '#4ECDC4', '#FFE66D',
@@ -398,7 +440,15 @@
             'RRP Share of (Reserves + RRP)': 'RRP Share',
             'RRP / Reserves Ratio': 'RRP/Reserves',
             'Net Liquidity (Billions)': 'Net Liquidity',
-            'Market Net Liquidity Proxy': 'Market Liquidity'
+            'Market Net Liquidity Proxy': 'Market Liquidity',
+            // BOJ labels
+            '10年国債利回り': '10Y JGB',
+            '3ヶ月銀行間金利': '3M Rate',
+            '日銀総資産': 'BOJ Assets',
+            'ドル円レート': 'USD/JPY',
+            '日本CPI': 'Japan CPI',
+            '日本M2': 'Japan M2',
+            '10年-3ヶ月カーブ': '10Y-3M Curve'
         };
 
         // Line styles for visual hierarchy
@@ -752,10 +802,29 @@
             });
         }
 
+        // Switch monitor
+        function switchMonitor(monitor) {
+            currentMonitor = monitor;
+            localStorage.setItem('monitor', monitor);
+
+            // Update button states
+            document.querySelectorAll('.monitor-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`.monitor-btn.${monitor}`).classList.add('active');
+
+            // Reload dashboard
+            loadDashboard();
+        }
+
         // Load and render data
         async function loadDashboard() {
             try {
-                const response = await fetch('data.json');
+                const dataFile = `${currentMonitor}-data.json`;
+                const response = await fetch(dataFile);
+                if (!response.ok) {
+                    throw new Error(`Could not load ${dataFile}`);
+                }
                 const data = await response.json();
 
                 // Update header
@@ -794,7 +863,16 @@
         });
 
         // Initialize
-        loadDashboard();
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set initial button state
+            document.querySelectorAll('.monitor-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`.monitor-btn.${currentMonitor}`).classList.add('active');
+
+            // Load dashboard
+            loadDashboard();
+        });
     </script>
 </body>
 </html>

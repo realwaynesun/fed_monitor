@@ -1,23 +1,24 @@
 """
-FRED API client for Fed Monitor.
+FRED API client for Fed Monitor and BOJ Monitor.
 Fetches economic data series from the Federal Reserve Economic Data API.
 """
 
 import time
 from datetime import datetime, timedelta
+from typing import Literal
 
 import pandas as pd
 import requests
 
-from .config import get_config
+from .config import get_config, get_monitor_config
 from .database import upsert_observations, log_fetch, get_latest_observation
 
 
 class FredClient:
     """Client for fetching data from FRED API."""
 
-    def __init__(self):
-        self.config = get_config()
+    def __init__(self, monitor: Literal["fed", "boj"] = "fed"):
+        self.config = get_monitor_config(monitor)
         self.base_url = self.config.fred_base_url
         self.api_key = self.config.fred_api_key
         self.rate_limit = self.config.fred_rate_limit
@@ -147,6 +148,7 @@ def fetch_all_series(
     start_date: str | None = None,
     end_date: str | None = None,
     backfill_days: int | None = None,
+    monitor: Literal["fed", "boj"] = "fed",
 ) -> dict[str, int]:
     """
     Fetch all configured series from FRED.
@@ -155,20 +157,23 @@ def fetch_all_series(
         start_date: Start date (overrides backfill_days)
         end_date: End date (defaults to today)
         backfill_days: Number of days to backfill (default: fetch from latest)
+        monitor: Which monitor's config to use ("fed" or "boj")
 
     Returns:
         Dict of series_key -> rows fetched
     """
-    config = get_config()
-    client = FredClient()
+    config = get_monitor_config(monitor)
+    client = FredClient(monitor=monitor)
     results = {}
 
     if end_date is None:
         end_date = datetime.now().strftime("%Y-%m-%d")
 
-    print(f"Fetching {len(config.series)} series from FRED...")
+    # Filter to only FRED-sourced series (those with series_id)
+    fred_series = [s for s in config.series if s.get("series_id")]
+    print(f"Fetching {len(fred_series)} series from FRED for {monitor.upper()} Monitor...")
 
-    for series_def in config.series:
+    for series_def in fred_series:
         series_key = series_def["key"]
         series_id = series_def["series_id"]
 
@@ -195,12 +200,16 @@ def fetch_all_series(
     return results
 
 
-def backfill_all(years: int = 2) -> dict[str, int]:
+def backfill_all(
+    years: int = 2,
+    monitor: Literal["fed", "boj"] = "fed",
+) -> dict[str, int]:
     """
     Backfill all series with historical data.
 
     Args:
         years: Number of years of history to fetch
+        monitor: Which monitor's config to use ("fed" or "boj")
 
     Returns:
         Dict of series_key -> rows fetched
@@ -208,5 +217,5 @@ def backfill_all(years: int = 2) -> dict[str, int]:
     start_date = (datetime.now() - timedelta(days=years * 365)).strftime("%Y-%m-%d")
     end_date = datetime.now().strftime("%Y-%m-%d")
 
-    print(f"Backfilling {years} years of data ({start_date} to {end_date})...")
-    return fetch_all_series(start_date=start_date, end_date=end_date)
+    print(f"Backfilling {years} years of {monitor.upper()} data ({start_date} to {end_date})...")
+    return fetch_all_series(start_date=start_date, end_date=end_date, monitor=monitor)

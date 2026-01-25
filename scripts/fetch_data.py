@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-CLI script to fetch data from FRED.
+CLI script to fetch data from FRED for Fed Monitor or BOJ Monitor.
 Usage:
-    python scripts/fetch_data.py             # Fetch new data since last fetch
-    python scripts/fetch_data.py --backfill  # Backfill 2 years of history
-    python scripts/fetch_data.py --days 30   # Fetch last 30 days
+    python scripts/fetch_data.py                    # Fetch Fed data (default)
+    python scripts/fetch_data.py --monitor boj      # Fetch BOJ data from FRED
+    python scripts/fetch_data.py --backfill         # Backfill 2 years of history
+    python scripts/fetch_data.py --days 30          # Fetch last 30 days
 """
 
 import argparse
@@ -25,7 +26,14 @@ from src.metrics import store_derived_metrics
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Fetch FRED data for Fed Monitor")
+    parser = argparse.ArgumentParser(description="Fetch FRED data for Fed/BOJ Monitor")
+    parser.add_argument(
+        "--monitor",
+        type=str,
+        choices=["fed", "boj"],
+        default="fed",
+        help="Which monitor to fetch data for (default: fed)",
+    )
     parser.add_argument(
         "--backfill",
         action="store_true",
@@ -45,25 +53,26 @@ def main():
     )
 
     args = parser.parse_args()
+    monitor = args.monitor
 
     # Initialize database
-    print("Initializing database...")
+    print(f"Initializing database for {monitor.upper()} Monitor...")
     init_db()
 
     # Fetch data
     if args.backfill:
-        print(f"\nBackfilling {args.years} years of data...")
-        results = backfill_all(years=args.years)
+        print(f"\nBackfilling {args.years} years of {monitor.upper()} data...")
+        results = backfill_all(years=args.years, monitor=monitor)
     elif args.days:
-        print(f"\nFetching last {args.days} days of data...")
-        results = fetch_all_series(backfill_days=args.days)
+        print(f"\nFetching last {args.days} days of {monitor.upper()} data...")
+        results = fetch_all_series(backfill_days=args.days, monitor=monitor)
     else:
-        print("\nFetching new data since last fetch...")
-        results = fetch_all_series()
+        print(f"\nFetching new {monitor.upper()} data since last fetch...")
+        results = fetch_all_series(monitor=monitor)
 
     # Calculate and store derived metrics
     print("\nCalculating derived metrics...")
-    derived_count = store_derived_metrics()
+    derived_count = store_derived_metrics(monitor=monitor)
     print(f"Stored {derived_count} derived metric values.")
 
     print("\nDone!")

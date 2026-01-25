@@ -29,12 +29,32 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Fetch data and export JSON
+      - name: Fetch and export Fed Monitor data
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: |
-          python scripts/fetch_data.py
-          python scripts/export_json.py
+          echo "=== Fetching Fed Monitor data ==="
+          python scripts/fetch_data.py --monitor fed
+          echo "=== Exporting Fed Monitor JSON ==="
+          python scripts/export_json.py --monitor fed
+
+      - name: Fetch and export BOJ Monitor data
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: |
+          echo "=== Fetching BOJ Monitor data ==="
+          python scripts/fetch_data.py --monitor boj
+          echo "=== Exporting BOJ Monitor JSON ==="
+          python scripts/export_json.py --monitor boj
+
+      - name: Verify output files
+        run: |
+          echo "=== Static files ==="
+          ls -la static/
+          echo "=== Fed data preview ==="
+          head -20 static/fed-data.json || echo "fed-data.json not found"
+          echo "=== BOJ data preview ==="
+          head -20 static/boj-data.json || echo "boj-data.json not found"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

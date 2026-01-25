@@ -1,12 +1,12 @@
 """
-Alert evaluation system for Fed Monitor.
+Alert evaluation system for Fed Monitor and BOJ Monitor.
 Evaluates alert rules and tracks state transitions (OK <-> BREACH).
 """
 
 import re
-from typing import Any
+from typing import Any, Literal
 
-from .config import get_config
+from .config import get_config, get_monitor_config
 from .database import (
     get_alert_state,
     update_alert_state,
@@ -56,13 +56,18 @@ def evaluate_rule(rule: str, context: dict[str, float], key: str = "") -> bool:
         return False
 
 
-def get_alert_context(key: str, df=None) -> dict[str, float]:
+def get_alert_context(
+    key: str,
+    df=None,
+    monitor: Literal["fed", "boj"] = "fed",
+) -> dict[str, float]:
     """
     Build context dict for evaluating an alert on a metric.
 
     Args:
         key: Metric key
         df: Pre-loaded metrics DataFrame (optional)
+        monitor: Which monitor's config to use ("fed" or "boj")
 
     Returns:
         Dict with 'value', 'd1', 'd5', 'd20', 'ma20', etc.
@@ -70,7 +75,7 @@ def get_alert_context(key: str, df=None) -> dict[str, float]:
     import pandas as pd
 
     if df is None:
-        df = calculate_all_metrics()
+        df = calculate_all_metrics(monitor=monitor)
 
     if df.empty or key not in df.columns:
         return {}
@@ -85,7 +90,7 @@ def get_alert_context(key: str, df=None) -> dict[str, float]:
     context = {"value": latest_value}
 
     # Build suffix list dynamically from config
-    config = get_config()
+    config = get_monitor_config(monitor)
     all_suffixes = [c["name"] for c in config.metric_changes] + [r["name"] for r in config.metric_rolling]
 
     for suffix in all_suffixes:
@@ -110,13 +115,18 @@ def get_alert_context(key: str, df=None) -> dict[str, float]:
     return context
 
 
-def evaluate_alert(alert_def: dict, df=None) -> dict[str, Any]:
+def evaluate_alert(
+    alert_def: dict,
+    df=None,
+    monitor: Literal["fed", "boj"] = "fed",
+) -> dict[str, Any]:
     """
     Evaluate a single alert definition.
 
     Args:
         alert_def: Alert definition from config
         df: Pre-loaded metrics DataFrame (optional)
+        monitor: Which monitor's config to use ("fed" or "boj")
 
     Returns:
         Dict with evaluation results
@@ -128,7 +138,7 @@ def evaluate_alert(alert_def: dict, df=None) -> dict[str, Any]:
     category = alert_def.get("category", "")
     alert_id = make_alert_id(alert_def)
 
-    context = get_alert_context(key, df)
+    context = get_alert_context(key, df, monitor=monitor)
 
     result = {
         "alert_id": alert_id,
@@ -154,21 +164,28 @@ def evaluate_alert(alert_def: dict, df=None) -> dict[str, Any]:
     return result
 
 
-def evaluate_all_alerts(df=None) -> list[dict[str, Any]]:
+def evaluate_all_alerts(
+    df=None,
+    monitor: Literal["fed", "boj"] = "fed",
+) -> list[dict[str, Any]]:
     """
     Evaluate all configured alerts.
+
+    Args:
+        df: Pre-loaded metrics DataFrame (optional)
+        monitor: Which monitor's config to use ("fed" or "boj")
 
     Returns:
         List of evaluation results for all alerts
     """
-    config = get_config()
+    config = get_monitor_config(monitor)
 
     if df is None:
-        df = calculate_all_metrics()
+        df = calculate_all_metrics(monitor=monitor)
 
     results = []
     for alert_def in config.alerts:
-        result = evaluate_alert(alert_def, df)
+        result = evaluate_alert(alert_def, df, monitor=monitor)
         results.append(result)
 
     return results
@@ -177,6 +194,7 @@ def evaluate_all_alerts(df=None) -> list[dict[str, Any]]:
 def check_alerts_with_state(
     notify_callback=None,
     severity_filter: list[str] | None = None,
+    monitor: Literal["fed", "boj"] = "fed",
 ) -> list[dict[str, Any]]:
     """
     Check all alerts and track state transitions.
@@ -186,12 +204,13 @@ def check_alerts_with_state(
         notify_callback: Function to call when alert transitions to BREACH
                         Signature: callback(alert_result)
         severity_filter: Only process these severities (default: all)
+        monitor: Which monitor's config to use ("fed" or "boj")
 
     Returns:
         List of alerts that transitioned to BREACH
     """
-    config = get_config()
-    df = calculate_all_metrics()
+    config = get_monitor_config(monitor)
+    df = calculate_all_metrics(monitor=monitor)
 
     triggered_alerts = []
 
@@ -202,7 +221,7 @@ def check_alerts_with_state(
         if severity_filter and severity not in severity_filter:
             continue
 
-        result = evaluate_alert(alert_def, df)
+        result = evaluate_alert(alert_def, df, monitor=monitor)
         alert_id = result["alert_id"]
 
         # Determine new state
@@ -240,25 +259,35 @@ def check_alerts_with_state(
     return triggered_alerts
 
 
-def get_current_breaches() -> list[dict[str, Any]]:
+def get_current_breaches(
+    monitor: Literal["fed", "boj"] = "fed",
+) -> list[dict[str, Any]]:
     """
     Get all alerts currently in BREACH state.
+
+    Args:
+        monitor: Which monitor's config to use ("fed" or "boj")
 
     Returns:
         List of alert results for breached alerts
     """
-    results = evaluate_all_alerts()
+    results = evaluate_all_alerts(monitor=monitor)
     return [r for r in results if r["triggered"]]
 
 
-def get_breach_summary() -> dict[str, list[dict]]:
+def get_breach_summary(
+    monitor: Literal["fed", "boj"] = "fed",
+) -> dict[str, list[dict]]:
     """
     Get summary of current breaches grouped by severity.
+
+    Args:
+        monitor: Which monitor's config to use ("fed" or "boj")
 
     Returns:
         Dict with 'critical', 'warning', 'info' keys
     """
-    breaches = get_current_breaches()
+    breaches = get_current_breaches(monitor=monitor)
 
     summary = {
         "critical": [],

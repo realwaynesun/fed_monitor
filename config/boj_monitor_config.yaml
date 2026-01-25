@@ -1,0 +1,661 @@
+# boj_monitor_config.yaml
+# BOJ (Bank of Japan) Monetary Policy & Liquidity Monitoring System
+# Version: 1.0
+# Last updated: 2026-01-14
+
+version: "1.0"
+last_updated: "2026-01-14"
+timezone: "Asia/Tokyo"
+
+# ============================================================================
+# DATA SOURCES
+# ============================================================================
+data_sources:
+  # BOJ direct downloads (Excel files)
+  boj:
+    base_url: "https://www.boj.or.jp"
+    stat_search_url: "https://www.stat-search.boj.or.jp"
+    # BOJ doesn't require API key
+    # Rate limiting: be polite to BOJ servers
+    rate_limit:
+      requests_per_minute: 30
+      retry_delay_seconds: 2
+
+  # FRED for some Japan macro data
+  fred:
+    base_url: "https://api.stlouisfed.org/fred"
+    file_type: "json"
+    api_key_env: "FRED_API_KEY"
+    rate_limit:
+      requests_per_minute: 100
+      retry_delay_seconds: 5
+
+# ============================================================================
+# NOTIFICATIONS
+# ============================================================================
+notifications:
+  telegram:
+    enabled: true
+    bot_token_env: "TELEGRAM_BOT_TOKEN"
+    chat_id_env: "TELEGRAM_CHAT_ID"
+    parse_mode: "markdown"
+
+# ============================================================================
+# SERIES DEFINITIONS
+# ============================================================================
+series:
+  # --------------------------------------------------------------------------
+  # POLICY RATES (政策金利)
+  # --------------------------------------------------------------------------
+  - key: tona
+    source: boj
+    label: "無担保コールO/N物レート"
+    label_en: "TONA (Uncollateralized Overnight Call Rate)"
+    frequency: "daily"
+    unit: "percent"
+    description: "日本のリスクフリーレート。LIBORの代替として使用される無担保翌日物金利"
+    fetch_method: "excel_daily"
+    url_pattern: "/statistics/market/short/mutan/d_release/md/{year}/md{date}.xlsx"
+
+  - key: tona_high
+    source: boj
+    label: "無担保コールO/N物レート（最高）"
+    label_en: "TONA High"
+    frequency: "daily"
+    unit: "percent"
+    description: "無担保コール翌日物の最高金利"
+    fetch_method: "derived_from_tona"
+
+  - key: tona_low
+    source: boj
+    label: "無担保コールO/N物レート（最低）"
+    label_en: "TONA Low"
+    frequency: "daily"
+    unit: "percent"
+    description: "無担保コール翌日物の最低金利"
+    fetch_method: "derived_from_tona"
+
+  - key: policy_rate_target
+    source: manual
+    label: "政策金利目標"
+    label_en: "BOJ Policy Rate Target"
+    frequency: "event"
+    unit: "percent"
+    description: "日銀の政策金利目標（現在0.5%）"
+    default_value: 0.5
+
+  - key: complementary_deposit_rate
+    source: manual
+    label: "補完当座預金制度適用利率"
+    label_en: "Complementary Deposit Facility Rate"
+    frequency: "event"
+    unit: "percent"
+    description: "超過準備に適用される付利（現在0.5%）"
+    default_value: 0.5
+
+  - key: basic_loan_rate
+    source: boj
+    label: "基準貸付利率"
+    label_en: "Basic Loan Rate (Lombard Rate)"
+    frequency: "daily"
+    unit: "percent"
+    description: "補完貸付制度の基準金利（Fedの Discount Window に相当）"
+    series_code: "IR01'MADR1Z@D"
+
+  # --------------------------------------------------------------------------
+  # REFERENCE RATES (参照金利)
+  # --------------------------------------------------------------------------
+  - key: tibor_3m
+    source: jba  # Japanese Bankers Association
+    label: "TIBOR 3ヶ月"
+    label_en: "3-Month TIBOR"
+    frequency: "daily"
+    unit: "percent"
+    description: "東京銀行間取引金利3ヶ月物"
+
+  - key: torf_3m
+    source: quick
+    label: "TORF 3ヶ月"
+    label_en: "3-Month TORF (Tokyo Term Risk Free Rate)"
+    frequency: "daily"
+    unit: "percent"
+    description: "TONAベースのターム物金利"
+
+  # --------------------------------------------------------------------------
+  # BOJ BALANCE SHEET (日銀バランスシート)
+  # --------------------------------------------------------------------------
+  - key: boj_total_assets
+    source: fred
+    series_id: "JPNASSETS"
+    label: "日銀総資産"
+    label_en: "BOJ Total Assets"
+    frequency: "monthly"
+    unit: "jpy_100millions"
+    description: "日本銀行の総資産"
+    align: "ffill_to_daily"
+
+  - key: current_account_balance
+    source: boj
+    label: "当座預金残高"
+    label_en: "Current Account Balances at BOJ"
+    frequency: "daily"
+    unit: "jpy_100millions"
+    description: "金融機関が日銀に預ける当座預金の残高（Fedの準備預金に相当）"
+    fetch_method: "market_ops"
+
+  - key: required_reserves
+    source: boj
+    label: "所要準備額"
+    label_en: "Required Reserves"
+    frequency: "monthly"
+    unit: "jpy_100millions"
+    description: "法定準備預金額"
+
+  - key: excess_reserves
+    source: boj
+    label: "超過準備"
+    label_en: "Excess Reserves"
+    frequency: "daily"
+    unit: "jpy_100millions"
+    description: "所要準備を超える当座預金残高"
+
+  - key: government_deposits
+    source: boj
+    label: "政府預金"
+    label_en: "Government Deposits"
+    frequency: "daily"
+    unit: "jpy_100millions"
+    description: "政府が日銀に預ける資金（TGAに相当）"
+
+  - key: banknotes_issued
+    source: boj
+    label: "発行銀行券"
+    label_en: "Banknotes Issued"
+    frequency: "monthly"
+    unit: "jpy_100millions"
+    description: "発行済み銀行券残高"
+
+  # --------------------------------------------------------------------------
+  # SECURITIES HOLDINGS (保有証券)
+  # --------------------------------------------------------------------------
+  - key: jgb_holdings
+    source: boj
+    label: "国債保有額"
+    label_en: "JGB Holdings"
+    frequency: "monthly"
+    unit: "jpy_100millions"
+    description: "日銀が保有する日本国債の総額"
+
+  - key: tb_holdings
+    source: boj
+    label: "国庫短期証券保有額"
+    label_en: "Treasury Bill Holdings"
+    frequency: "monthly"
+    unit: "jpy_100millions"
+    description: "日銀が保有する国庫短期証券"
+
+  - key: etf_holdings
+    source: boj
+    label: "ETF保有額"
+    label_en: "ETF Holdings"
+    frequency: "monthly"
+    unit: "jpy_100millions"
+    description: "日銀が保有するETF（日本特有のQE手段）"
+
+  - key: jreit_holdings
+    source: boj
+    label: "J-REIT保有額"
+    label_en: "J-REIT Holdings"
+    frequency: "monthly"
+    unit: "jpy_100millions"
+    description: "日銀が保有するJ-REIT"
+
+  - key: cp_holdings
+    source: boj
+    label: "CP等保有額"
+    label_en: "Commercial Paper Holdings"
+    frequency: "monthly"
+    unit: "jpy_100millions"
+    description: "日銀が保有するコマーシャルペーパー"
+
+  - key: corporate_bond_holdings
+    source: boj
+    label: "社債保有額"
+    label_en: "Corporate Bond Holdings"
+    frequency: "monthly"
+    unit: "jpy_100millions"
+    description: "日銀が保有する社債"
+
+  # --------------------------------------------------------------------------
+  # MARKET OPERATIONS (市場操作)
+  # --------------------------------------------------------------------------
+  - key: funds_supplying_ops
+    source: boj
+    label: "資金供給オペ"
+    label_en: "Funds-Supplying Operations"
+    frequency: "daily"
+    unit: "jpy_100millions"
+    description: "共通担保オペ等による資金供給"
+
+  - key: funds_absorbing_ops
+    source: boj
+    label: "資金吸収オペ"
+    label_en: "Funds-Absorbing Operations"
+    frequency: "daily"
+    unit: "jpy_100millions"
+    description: "売出手形等による資金吸収"
+
+  # --------------------------------------------------------------------------
+  # JGB YIELDS (国債利回り)
+  # --------------------------------------------------------------------------
+  - key: jgb_2y
+    source: fred
+    label: "2年国債利回り"
+    label_en: "2-Year JGB Yield"
+    frequency: "daily"
+    unit: "percent"
+    description: "2年物日本国債利回り"
+
+  - key: jgb_10y
+    source: fred
+    series_id: "IRLTLT01JPM156N"
+    label: "10年国債利回り"
+    label_en: "10-Year JGB Yield"
+    frequency: "monthly"
+    unit: "percent"
+    description: "10年物日本国債利回り（YCC対象）"
+    align: "ffill_to_daily"
+
+  - key: jgb_30y
+    source: fred
+    label: "30年国債利回り"
+    label_en: "30-Year JGB Yield"
+    frequency: "daily"
+    unit: "percent"
+    description: "30年物日本国債利回り"
+
+  # --------------------------------------------------------------------------
+  # YCC (イールドカーブ・コントロール) - 日本特有
+  # --------------------------------------------------------------------------
+  - key: ycc_target_upper
+    source: manual
+    label: "YCC上限"
+    label_en: "YCC Upper Bound"
+    frequency: "event"
+    unit: "percent"
+    description: "10年国債利回りの上限目標（現在は事実上撤廃、参考値1.0%）"
+    default_value: 1.0
+
+  - key: ycc_target_lower
+    source: manual
+    label: "YCC下限"
+    label_en: "YCC Lower Bound"
+    frequency: "event"
+    unit: "percent"
+    description: "10年国債利回りの下限目標"
+    default_value: -1.0
+
+  # --------------------------------------------------------------------------
+  # FINANCIAL CONDITIONS (金融環境)
+  # --------------------------------------------------------------------------
+  - key: nikkei_vi
+    source: external
+    label: "日経VI"
+    label_en: "Nikkei Volatility Index"
+    frequency: "daily"
+    unit: "index"
+    description: "日経平均のインプライド・ボラティリティ（VIXに相当）"
+
+  - key: usdjpy
+    source: boj
+    label: "ドル円レート"
+    label_en: "USD/JPY Exchange Rate"
+    frequency: "daily"
+    unit: "jpy_per_usd"
+    description: "ドル円為替レート"
+    series_code: "FM08'FXERD04"
+
+  - key: corporate_bond_spread
+    source: external
+    label: "社債スプレッド"
+    label_en: "Corporate Bond Spread"
+    frequency: "daily"
+    unit: "bps"
+    description: "投資適格社債と国債のスプレッド"
+
+# ============================================================================
+# DERIVED METRICS
+# ============================================================================
+derived:
+  # --------------------------------------------------------------------------
+  # Rate Spreads (金利スプレッド)
+  # --------------------------------------------------------------------------
+  - key: spread_tona_target
+    label: "TONA vs 政策目標"
+    label_en: "TONA vs Policy Target"
+    unit: "bps"
+    expr: "(tona - policy_rate_target) * 100"
+    description: "TONAと政策金利目標の乖離（bps）"
+
+  - key: spread_tona_deposit_rate
+    label: "TONA vs 補完当座預金利率"
+    label_en: "TONA vs Complementary Deposit Rate"
+    unit: "bps"
+    expr: "(tona - complementary_deposit_rate) * 100"
+    description: "TONAと付利の乖離（EFFR-IORBに相当）"
+
+  - key: tona_range
+    label: "TONA レンジ"
+    label_en: "TONA Range (High-Low)"
+    unit: "bps"
+    expr: "(tona_high - tona_low) * 100"
+    description: "TONA最高-最低（市場分散度）"
+
+  # --------------------------------------------------------------------------
+  # YCC Monitoring (YCCモニタリング) - 日本特有
+  # --------------------------------------------------------------------------
+  - key: ycc_deviation
+    label: "YCC乖離"
+    label_en: "10Y JGB vs YCC Target"
+    unit: "bps"
+    expr: "(jgb_10y - 0) * 100"  # YCC target midpoint is ~0%
+    description: "10年国債利回りのYCC目標からの乖離"
+
+  - key: ycc_headroom_upper
+    label: "YCC上限余裕"
+    label_en: "YCC Upper Headroom"
+    unit: "bps"
+    expr: "(ycc_target_upper - jgb_10y) * 100"
+    description: "10年国債利回りのYCC上限までの余裕"
+
+  # --------------------------------------------------------------------------
+  # Curve (イールドカーブ)
+  # --------------------------------------------------------------------------
+  - key: curve_10y2y
+    label: "10年-2年カーブ"
+    label_en: "10Y-2Y JGB Curve"
+    unit: "bps"
+    expr: "(jgb_10y - jgb_2y) * 100"
+    description: "国債イールドカーブ（10年-2年）"
+
+  # --------------------------------------------------------------------------
+  # Liquidity (流動性)
+  # --------------------------------------------------------------------------
+  - key: excess_reserves_ratio
+    label: "超過準備率"
+    label_en: "Excess Reserves Ratio"
+    unit: "percent"
+    expr: "(excess_reserves / current_account_balance) * 100"
+    description: "当座預金に占める超過準備の割合"
+
+  # --------------------------------------------------------------------------
+  # QQE Composition (量的質的緩和構成)
+  # --------------------------------------------------------------------------
+  - key: etf_share_of_assets
+    label: "ETF資産比率"
+    label_en: "ETF Share of Total Assets"
+    unit: "percent"
+    expr: "(etf_holdings / boj_total_assets) * 100"
+    description: "日銀総資産に占めるETFの割合"
+
+  - key: jgb_share_of_assets
+    label: "国債資産比率"
+    label_en: "JGB Share of Total Assets"
+    unit: "percent"
+    expr: "(jgb_holdings / boj_total_assets) * 100"
+    description: "日銀総資産に占める国債の割合"
+
+# ============================================================================
+# METRICS CALCULATION
+# ============================================================================
+metrics:
+  changes:
+    - name: "d1"
+      type: "diff"
+      periods: 1
+      description: "1日変化"
+    - name: "d5"
+      type: "diff"
+      periods: 5
+      description: "5日変化"
+    - name: "d20"
+      type: "diff"
+      periods: 20
+      description: "20日変化"
+
+  rolling:
+    - name: "ma5"
+      type: "rolling_mean"
+      window: 5
+      description: "5日移動平均"
+    - name: "ma20"
+      type: "rolling_mean"
+      window: 20
+      description: "20日移動平均"
+    - name: "zscore20"
+      type: "zscore"
+      window: 20
+      description: "20日Zスコア"
+    - name: "zscore60"
+      type: "zscore"
+      window: 60
+      description: "60日Zスコア"
+
+# ============================================================================
+# ALERT RULES
+# ============================================================================
+alerts:
+  # --------------------------------------------------------------------------
+  # Policy Rate Implementation (政策金利実施)
+  # --------------------------------------------------------------------------
+  - key: spread_tona_target
+    rule: "abs(ma5) > 3"
+    severity: "warning"
+    note: "TONAが政策目標から3bp以上乖離（5日平均）"
+    category: "rates"
+
+  - key: spread_tona_target
+    rule: "abs(ma5) > 5"
+    severity: "critical"
+    note: "TONAが政策目標から5bp以上乖離（5日平均）- 金利誘導に問題の可能性"
+    category: "rates"
+
+  - key: spread_tona_deposit_rate
+    rule: "ma5 > 0"
+    severity: "warning"
+    note: "TONAが補完当座預金利率を上回る（5日平均）- 資金需給逼迫の可能性"
+    category: "rates"
+
+  - key: tona_range
+    rule: "zscore20 > 2"
+    severity: "warning"
+    note: "TONAレンジ（高-低）が異常拡大（20日Z>2）- 市場分断の兆候"
+    category: "rates"
+
+  # --------------------------------------------------------------------------
+  # YCC Monitoring (YCCモニタリング)
+  # --------------------------------------------------------------------------
+  - key: jgb_10y
+    rule: "value > 1.5"
+    severity: "warning"
+    note: "10年国債利回りが1.5%超 - YCC上限接近"
+    category: "ycc"
+
+  - key: jgb_10y
+    rule: "value > 2.0"
+    severity: "critical"
+    note: "10年国債利回りが2.0%超 - 日銀介入の可能性"
+    category: "ycc"
+
+  - key: jgb_10y
+    rule: "d5 > 0.2"
+    severity: "warning"
+    note: "10年国債利回りが5日で20bp以上上昇 - 急激な金利上昇"
+    category: "ycc"
+
+  # --------------------------------------------------------------------------
+  # Liquidity (流動性)
+  # --------------------------------------------------------------------------
+  - key: current_account_balance
+    rule: "d5 < -50000"
+    severity: "warning"
+    note: "当座預金が5日で5兆円以上減少"
+    category: "liquidity"
+
+  - key: current_account_balance
+    rule: "d20 < -100000"
+    severity: "critical"
+    note: "当座預金が20日で10兆円以上減少 - 大規模流動性収縮"
+    category: "liquidity"
+
+  # --------------------------------------------------------------------------
+  # FX (為替)
+  # --------------------------------------------------------------------------
+  - key: usdjpy
+    rule: "value > 160"
+    severity: "warning"
+    note: "ドル円が160円超 - 円安警戒水準"
+    category: "fx"
+
+  - key: usdjpy
+    rule: "d5 > 5"
+    severity: "warning"
+    note: "ドル円が5日で5円以上円安 - 急激な円安進行"
+    category: "fx"
+
+  # --------------------------------------------------------------------------
+  # Market Stress (市場ストレス)
+  # --------------------------------------------------------------------------
+  - key: nikkei_vi
+    rule: "value > 25"
+    severity: "warning"
+    note: "日経VIが25超 - 市場不安定"
+    category: "stress"
+
+  - key: nikkei_vi
+    rule: "value > 35"
+    severity: "critical"
+    note: "日経VIが35超 - 高ボラティリティ環境"
+    category: "stress"
+
+# ============================================================================
+# DASHBOARD PANEL CONFIGURATION
+# ============================================================================
+panel:
+  refresh_interval_seconds: 300
+
+  charts:
+    - title: "政策金利コリドー / Policy Rate Corridor"
+      series: ["tona", "policy_rate_target", "complementary_deposit_rate", "basic_loan_rate"]
+      chart_type: "line"
+      y_axis_label: "金利 (%)"
+      height: 380
+
+    - title: "TONA レンジ / TONA Range"
+      series: ["tona", "tona_high", "tona_low"]
+      chart_type: "line"
+      y_axis_label: "金利 (%)"
+      height: 320
+
+    - title: "政策金利スプレッド / Policy Rate Spreads (bps)"
+      series: ["spread_tona_target", "spread_tona_deposit_rate", "tona_range"]
+      chart_type: "line"
+      y_axis_label: "スプレッド (bps)"
+      reference_line: 0
+      height: 340
+
+    - title: "国債イールドカーブ / JGB Yield Curve"
+      series: ["jgb_2y", "jgb_10y", "jgb_30y"]
+      chart_type: "line"
+      y_axis_label: "利回り (%)"
+      height: 340
+
+    - title: "YCCモニタリング / YCC Monitoring"
+      series: ["jgb_10y", "ycc_target_upper", "ycc_target_lower"]
+      chart_type: "line"
+      y_axis_label: "利回り (%)"
+      reference_line: 0
+      height: 320
+
+    - title: "当座預金残高 / Current Account Balances"
+      series: ["current_account_balance", "excess_reserves", "required_reserves"]
+      chart_type: "line"
+      y_axis_label: "億円"
+      height: 360
+
+    - title: "日銀資産構成 / BOJ Asset Composition"
+      series: ["jgb_holdings", "etf_holdings", "cp_holdings", "corporate_bond_holdings"]
+      chart_type: "line"
+      y_axis_label: "億円"
+      height: 360
+
+    - title: "ドル円 / USD/JPY"
+      series: ["usdjpy"]
+      chart_type: "line"
+      y_axis_label: "円/ドル"
+      height: 280
+
+    - title: "日経VI / Nikkei VI"
+      series: ["nikkei_vi"]
+      chart_type: "area"
+      y_axis_label: "指数"
+      height: 280
+
+  tables:
+    - title: "政策金利スナップショット / Policy Rate Snapshot"
+      series: ["tona", "policy_rate_target", "complementary_deposit_rate", "basic_loan_rate", "spread_tona_target"]
+      show_columns: ["value", "d1", "d5", "zscore20"]
+
+    - title: "流動性・バランスシート / Liquidity & Balance Sheet"
+      series: ["current_account_balance", "excess_reserves", "government_deposits", "boj_total_assets", "jgb_holdings", "etf_holdings"]
+      show_columns: ["value", "d5", "d20", "zscore60"]
+
+    - title: "国債利回り / JGB Yields"
+      series: ["jgb_2y", "jgb_10y", "jgb_30y", "curve_10y2y"]
+      show_columns: ["value", "d1", "d5", "zscore20"]
+
+# ============================================================================
+# SCHEDULER
+# ============================================================================
+schedule:
+  # Daily data fetch (Tokyo morning, after BOJ releases)
+  fetch_daily:
+    cron: "0 11 * * 1-5"
+    timezone: "Asia/Tokyo"
+    description: "平日11時にデイリーデータ取得（BOJ発表後）"
+
+  # Alert checking
+  check_alerts:
+    cron: "*/30 9-17 * * 1-5"
+    timezone: "Asia/Tokyo"
+    description: "東京市場時間中30分毎にアラートチェック"
+
+  # Daily summary
+  daily_summary:
+    cron: "0 18 * * 1-5"
+    timezone: "Asia/Tokyo"
+    description: "平日18時にデイリーサマリー送信"
+
+# ============================================================================
+# DATABASE
+# ============================================================================
+database:
+  type: "sqlite"
+  path: "boj_monitor.db"
+
+  tables:
+    observations:
+      description: "生データ"
+      retention_days: 3650
+
+    derived_metrics:
+      description: "派生指標"
+      retention_days: 3650
+
+    alerts_log:
+      description: "アラート履歴"
+      retention_days: 365
+
+    fetch_log:
+      description: "データ取得履歴"
+      retention_days: 30
